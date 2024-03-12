@@ -6,7 +6,7 @@ export class CredLoginDto {
   @IsEmail()
   readonly email: string;
 
-  @ApiProperty({ example: '111111' })
+  @ApiProperty({ example: '123456' })
   @IsString()
   readonly password: string;
 }

@@ -9,6 +9,8 @@ import { ExceptionFiltersModule } from './exception-filters/exception-filters.mo
 import { FinanceModule } from './finance/finance.module';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
+import { PlaylistModule } from './playlist/playlist.module';
+import { EntitiesModule } from './entities/entities.module';
 
 @Module({
   imports: [
@@ -16,8 +18,11 @@ import { VideoModule } from './video/video.module';
       type: 'postgres',
       url: process.env.DATABASE_URL,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      autoLoadEntities: true, // Load entity classes automatically from the "entities" array.
+      autoLoadEntities: true,
       synchronize: true,
+      ssl: {
+        rejectUnauthorized: false,
+      },
     }),
     AuthModule,
     UsersModule,
@@ -27,6 +32,8 @@ import { VideoModule } from './video/video.module';
     FinanceModule,
     ExceptionFiltersModule,
     VideoModule,
+    PlaylistModule,
+    EntitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

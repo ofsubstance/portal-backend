@@ -18,7 +18,4 @@ export class User extends BaseEntity {
 
   @Column({ default: status.active })
   status: string;
-
-  // @OneToMany(() => Booking, (booking) => booking.client)
-  // bookings: Booking[];
 }
