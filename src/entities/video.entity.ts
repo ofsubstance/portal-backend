@@ -7,6 +7,12 @@ import { Watchtime } from './watchtime.entity';
 
 @Entity()
 export class Video extends BaseEntity {
+  @Column()
+  video_url: string;
+
+  @Column()
+  thumbnail_url: string;
+
   @Column({ length: 500 })
   title: string;
 

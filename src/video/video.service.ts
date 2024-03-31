@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { errorhandler, successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
 import { Video } from '../entities/video.entity';
+import { CreateUpdateVideoDto } from './dto/createUpdateVideo.dto';
 
 @Injectable()
 export class VideoService {
@@ -23,7 +24,7 @@ export class VideoService {
     return videos;
   }
 
-  async searchVideo(keyword: string) {
+  async searchVideos(keyword: string) {
     const videos = await this.videoRepo
       .createQueryBuilder('video')
       .where('video.title LIKE :keyword', { keyword: `%${keyword}%` })
@@ -39,7 +40,7 @@ export class VideoService {
     return videos;
   }
 
-  async createVideo(attributes: Partial<Video>) {
+  async createVideo(attributes: CreateUpdateVideoDto) {
     const video = this.videoRepo.create(attributes);
     const newVideo = await this.videoRepo.save(video);
     return successHandler('Video created successfully', newVideo);

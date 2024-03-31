@@ -30,6 +30,7 @@ export class AuthController {
     @Response({ passthrough: true }) res: any,
   ) {
     const result = await this.authService.login(loginInfo);
+    console.log(result);
 
     res.cookie('refreshToken', result.body.refresh_token, {
       expires: new Date(new Date().setDate(new Date().getDate() + 7)),

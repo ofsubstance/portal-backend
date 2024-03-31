@@ -9,6 +9,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { CreateUpdateVideoDto } from './dto/createUpdateVideo.dto';
 import { VideoService } from './video.service';
 
 @Catch()
@@ -34,16 +35,19 @@ export class VideoController {
 
   @Get('/search/:keyword')
   findVideoBySearch(@Param('keyword') keyword: string) {
-    return this.videoService.searchVideo(keyword);
+    return this.videoService.searchVideos(keyword);
   }
 
   @Post()
-  createVideo(@Body() attributes: any) {
+  createVideo(@Body() attributes: CreateUpdateVideoDto) {
     return this.videoService.createVideo(attributes);
   }
 
   @Patch('/:id')
-  updateVideo(@Param('id') id: string, @Body() attributes: any) {
+  updateVideo(
+    @Param('id') id: string,
+    @Body() attributes: CreateUpdateVideoDto,
+  ) {
     return this.videoService.updateVideo(id, attributes);
   }
 

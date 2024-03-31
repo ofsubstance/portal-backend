@@ -68,7 +68,11 @@ export class AuthService {
 
     delete newUser.password;
 
-    return newUser;
+    const loginAttempt = await this.login({
+      email: signupUserDto.email,
+      password: signupUserDto.password,
+    });
+    return loginAttempt;
   }
 
   async login(loginInfo: CredLoginDto) {
