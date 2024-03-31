@@ -1,13 +1,7 @@
-import {
-  Body,
-  Catch,
-  Controller,
-  Get,
-  Post,
-  Request,
-  Response,
-} from '@nestjs/common';
+import { Body, Catch, Controller, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
+import { Public } from 'src/decorators/auth.decorator';
 import { AuthService } from './auth.service';
 import { CredLoginDto, GoogleLoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/signup.dto';
@@ -18,54 +12,90 @@ import { SignUpDto } from './dto/signup.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('/signup')
-  async signUp(@Body() signUpDto: SignUpDto) {
-    return await this.authService.signUp(signUpDto);
+  async signUp(
+    @Req() req: Request,
+    @Body() signUpDto: SignUpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const signupResult = await this.authService.signUp(signUpDto);
+
+    this.setTokenCookie(
+      res,
+      'refreshToken',
+      signupResult.body.refresh_token,
+      7,
+    );
+    this.setTokenCookie(res, 'accessToken', signupResult.body.access_token, 1);
+
+    return signupResult;
   }
 
-  @Post('/login')
-  async login(
-    @Request() req: any,
-    @Body() loginInfo: CredLoginDto,
-    @Response({ passthrough: true }) res: any,
+  async setTokenCookie(
+    res: Response,
+    key: string,
+    token: string,
+    expiresIn: number,
   ) {
-    const result = await this.authService.login(loginInfo);
-    console.log(result);
-
-    res.cookie('refreshToken', result.body.refresh_token, {
-      expires: new Date(new Date().setDate(new Date().getDate() + 7)),
+    res.cookie(key, token, {
+      expires: new Date(new Date().setDate(new Date().getDate() + expiresIn)),
       sameSite: 'none',
       httpOnly: true,
       secure: false,
     });
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
+  }
+
+  @Public()
+  @Post('/login')
+  async login(
+    @Req() req: Request,
+    @Body() loginInfo: CredLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(loginInfo);
+    console.log(result);
+
+    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
 
     return result;
   }
 
-  @Get('/refresh')
-  async refreshTokens(
-    @Request() req: any,
-    @Response({ passthrough: true }) res: any,
+  @Post('/refresh')
+  async getNewTokens(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.authService.refreshTokens(
-      res,
-      req,
+    const result = await this.authService.refreshTokens(
       req.cookies.refreshToken,
     );
+
+    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
+
+    return result;
   }
 
-  @Get('/logout')
-  async logout(@Request() req: any, @Response({ passthrough: true }) res: any) {
-    return await this.authService.logout(req, res);
+  @Public()
+  @Post('/logout')
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    res.clearCookie('refreshToken');
+    res.clearCookie('accessToken');
+    return;
   }
 
   @Post('google-login')
   async googleLogin(
-    @Request() request,
+    @Req() req,
     @Body() googleLoginDto: GoogleLoginDto,
-    @Response({ passthrough: true }) res,
+    @Res({ passthrough: true }) res,
   ) {
-    return await this.authService.googleLogin(request, googleLoginDto, res);
+    const result = await this.authService.googleLogin(googleLoginDto);
+
+    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
+
+    return result;
   }
 }

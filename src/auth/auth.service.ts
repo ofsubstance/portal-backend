@@ -5,13 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/entities/users.entity';
 import { UsersService } from 'src/users/users.service';
 import { PasswordStrategy } from 'src/utils/auth/strategy/password.strategy';
-import { jwtConfig } from 'src/utils/configs/jwt.config';
 import { role } from 'src/utils/constants';
 import { successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
@@ -25,27 +25,33 @@ export class AuthService {
     @InjectRepository(User) private userRepo: Repository<User>,
     private jwtService: JwtService,
     private passwordStrategy: PasswordStrategy,
+    private configService: ConfigService,
   ) {}
 
-  async getTokens(userId: string, email: string, role: string) {
+  async getTokens(userId: string, role: string) {
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, email, role },
-        { secret: jwtConfig.secret, expiresIn: jwtConfig.expires_in },
+        { sub: userId, role },
+        {
+          secret: this.configService.get('ACCESS_TOKEN_SECRET'),
+          expiresIn: this.configService.get('ACCESS_TOKEN_EXPIRATION_TIME'),
+        },
       ),
       this.jwtService.signAsync(
-        { sub: userId, email, role },
+        { sub: userId, role },
         {
-          secret: jwtConfig.REFRESH_TOKEN_SECRET,
-          expiresIn: jwtConfig.REFRESH_TOKEN_EXPIRATION,
+          secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+          expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRATION_TIME'),
         },
       ),
     ]);
 
-    return {
-      access_token: access_token,
-      refresh_token: refresh_token,
+    const tokens = {
+      access_token,
+      refresh_token,
     };
+
+    return tokens;
   }
 
   async signUp(signupUserDto: SignUpDto, userRole: string = role.user) {
@@ -90,15 +96,10 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid password');
     }
-    const tokens = await this.getTokens(
-      userInfo.id,
-      userInfo.email,
-      userInfo.role,
-    );
+    const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
     return successHandler('Login successful', {
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      ...tokens,
       user: {
         id: userInfo.id,
         name: userInfo.name,
@@ -108,10 +109,8 @@ export class AuthService {
     });
   }
 
-  async refreshTokens(res: any, req: any, token: string) {
+  async refreshTokens(token: string) {
     try {
-      res.header('Access-Control-Allow-Origin', req.headers.origin);
-
       const decodedJwtRefreshToken: any = this.jwtService.decode(token);
 
       if (!decodedJwtRefreshToken) {
@@ -131,11 +130,7 @@ export class AuthService {
         throw new ForbiddenException('Access Denied');
       }
 
-      const tokens = await this.getTokens(
-        userInfo.id,
-        userInfo.email,
-        userInfo.role,
-      );
+      const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
       return successHandler('Login successful', {
         access_token: tokens.access_token,
@@ -147,27 +142,12 @@ export class AuthService {
           role: userInfo.role,
         },
       });
-    } catch (error) {
-      return new BadRequestException(error);
-    }
-  }
-
-  async logout(req: any, res: any) {
-    try {
-      res.header('Access-Control-Allow-Origin', req.headers.origin);
-      res.clearCookie('refreshToken', {
-        sameSite: 'none',
-        httpOnly: true,
-        secure: false,
-      });
-      return 'Logged out!';
     } catch (err) {
-      return new BadRequestException(err);
+      throw new BadRequestException(err);
     }
   }
 
-  async googleLogin(req: any, googleLoginDto: GoogleLoginDto, res: any) {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
+  async googleLogin(googleLoginDto: GoogleLoginDto) {
     let [userInfo] = await this.usersService.findUserByEmail(
       googleLoginDto.email,
     );
@@ -180,15 +160,10 @@ export class AuthService {
       userInfo = await this.userRepo.save(newUser);
     }
 
-    const tokens = await this.getTokens(
-      userInfo.id,
-      userInfo.email,
-      userInfo.role,
-    );
+    const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
     return successHandler('Login successful', {
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      ...tokens,
       user: {
         id: userInfo.id,
         name: userInfo.name,
