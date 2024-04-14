@@ -1,4 +1,6 @@
 export default () => ({
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+
   APP_NAME: process.env.APP_NAME || 'NestJS APP',
 
   PORT: process.env.PORT || 5000,
