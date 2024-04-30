@@ -3,8 +3,8 @@ import { JwtModule } from '@nestjs/jwt/dist';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/entities/users.entity';
 import { UsersModule } from 'src/users/users.module';
-import { JwtStrategy } from 'src/utils/auth/strategy/jwt.strategy';
-import { PasswordStrategy } from 'src/utils/auth/strategy/password.strategy';
+
+import { PasswordStrategy } from 'src/utils/password.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -14,7 +14,7 @@ import { AuthService } from './auth.service';
     TypeOrmModule.forFeature([User]),
     JwtModule.register({}),
   ],
-  providers: [AuthService, JwtStrategy, PasswordStrategy],
+  providers: [AuthService, PasswordStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

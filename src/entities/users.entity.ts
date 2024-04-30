@@ -1,6 +1,7 @@
-import { role, status } from 'src/utils/constants';
+import { Role } from 'src/enums/role.enum';
+import { Status } from 'src/enums/status.enum';
 import { Column, Entity } from 'typeorm';
-import { BaseEntity } from '../utils/base.entity';
+import { BaseEntity } from './base.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -13,9 +14,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   password: string;
 
-  @Column({ default: role.user })
-  role: string;
+  @Column({ default: Role.User })
+  role: Role;
 
-  @Column({ default: status.active })
-  status: string;
+  @Column({ default: Status.Active })
+  status: Status;
 }

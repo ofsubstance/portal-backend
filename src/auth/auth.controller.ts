@@ -62,6 +62,7 @@ export class AuthController {
     return result;
   }
 
+  @Public()
   @Post('/refresh')
   async getNewTokens(
     @Req() req: Request,
@@ -85,6 +86,7 @@ export class AuthController {
     return;
   }
 
+  @Public()
   @Post('google-login')
   async googleLogin(
     @Req() req,

@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, ManyToMany } from 'typeorm';
-import { BaseEntity } from '../utils/base.entity';
+import { BaseEntity } from './base.entity';
 import { Video } from './video.entity';
 
 @Entity()

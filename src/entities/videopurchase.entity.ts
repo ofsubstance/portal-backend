@@ -1,5 +1,5 @@
 import { Entity, ManyToOne } from 'typeorm';
-import { BaseEntity } from '../utils/base.entity';
+import { BaseEntity } from './base.entity';
 import { Video } from './video.entity';
 import { Viewer } from './viewer.entity';
 

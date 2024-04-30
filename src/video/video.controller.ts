@@ -7,8 +7,12 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/decorators/auth.decorator';
 import { CreateUpdateVideoDto } from './dto/createUpdateVideo.dto';
 import { VideoService } from './video.service';
 
@@ -18,11 +22,13 @@ import { VideoService } from './video.service';
 export class VideoController {
   constructor(private videoService: VideoService) {}
 
+  @Public()
   @Get()
   findAllVideos() {
     return this.videoService.findAllVideos();
   }
 
+  @Public()
   @Get('/:id')
   findVideoById(@Param('id') id: string) {
     return this.videoService.findVideoById(id);
@@ -38,9 +44,15 @@ export class VideoController {
     return this.videoService.searchVideos(keyword);
   }
 
+  @Public()
   @Post()
-  createVideo(@Body() attributes: CreateUpdateVideoDto) {
-    return this.videoService.createVideo(attributes);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('thumbnail'))
+  createVideo(
+    @UploadedFile() thumbnail: Express.Multer.File,
+    @Body() attributes: CreateUpdateVideoDto,
+  ) {
+    return this.videoService.createVideo(thumbnail, attributes);
   }
 
   @Patch('/:id')

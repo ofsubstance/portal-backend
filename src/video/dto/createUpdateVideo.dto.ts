@@ -6,16 +6,15 @@ export class CreateUpdateVideoDto {
   @IsString()
   readonly video_url: string;
 
-  @ApiProperty()
-  @IsString()
-  readonly thumbnail_url: string;
+  @ApiProperty({ type: 'string', format: 'binary' })
+  readonly thumbnail: File;
 
   @ApiProperty({ example: 'Hide your Crazy' })
   @IsString()
   readonly title: string;
 
   @ApiProperty({ example: '123456' })
-  readonly genre: string[];
+  readonly genre: string;
 
   @ApiProperty({ example: '18:54' })
   @IsString()

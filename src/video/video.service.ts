@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
+import { CloudinaryUpload } from 'src/utils/coudinary-upload';
 import { errorhandler, successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
 import { Video } from '../entities/video.entity';
@@ -40,8 +42,22 @@ export class VideoService {
     return videos;
   }
 
-  async createVideo(attributes: CreateUpdateVideoDto) {
-    const video = this.videoRepo.create(attributes);
+  async createVideo(
+    thumbnail: Express.Multer.File,
+    attributes: CreateUpdateVideoDto,
+  ) {
+    const cloudinaryUpload = await CloudinaryUpload(
+      thumbnail,
+      'thumbnails',
+      randomUUID(),
+    );
+
+    const video_url = cloudinaryUpload.secure_url;
+
+    const video = this.videoRepo.create({
+      ...attributes,
+      video_url: video_url,
+    });
     const newVideo = await this.videoRepo.save(video);
     return successHandler('Video created successfully', newVideo);
   }

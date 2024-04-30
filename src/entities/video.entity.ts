@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { BaseEntity } from '../utils/base.entity';
+import { BaseEntity } from './base.entity';
 import { Download } from './download.entity';
 import { Feedback } from './feedback.entity';
 import { VideoPurchase } from './videopurchase.entity';
@@ -17,7 +17,7 @@ export class Video extends BaseEntity {
   title: string;
 
   @Column('text', { array: true })
-  genre: string[];
+  genre: string;
 
   @Column()
   duration: string;

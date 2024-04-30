@@ -10,9 +10,9 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/entities/users.entity';
+import { Role } from 'src/enums/role.enum';
 import { UsersService } from 'src/users/users.service';
-import { PasswordStrategy } from 'src/utils/auth/strategy/password.strategy';
-import { role } from 'src/utils/constants';
+import { PasswordStrategy } from 'src/utils/password.strategy';
 import { successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
 import { CredLoginDto, GoogleLoginDto } from './dto/login.dto';
@@ -54,7 +54,7 @@ export class AuthService {
     return tokens;
   }
 
-  async signUp(signupUserDto: SignUpDto, userRole: string = role.user) {
+  async signUp(signupUserDto: SignUpDto, userRole: Role = Role.User) {
     const user = await this.usersService.findUserByEmail(signupUserDto.email);
     if (user.length) {
       throw new BadRequestException('User with this email already exists');
@@ -155,7 +155,7 @@ export class AuthService {
     if (!userInfo) {
       const newUser = this.userRepo.create({
         ...googleLoginDto,
-        role: role.user,
+        role: Role.User,
       });
       userInfo = await this.userRepo.save(newUser);
     }
