@@ -21,13 +21,8 @@ export class AuthController {
   ) {
     const signupResult = await this.authService.signUp(signUpDto);
 
-    this.setTokenCookie(
-      res,
-      'refreshToken',
-      signupResult.body.refresh_token,
-      7,
-    );
-    this.setTokenCookie(res, 'accessToken', signupResult.body.access_token, 1);
+    this.setTokenCookie(res, 'refreshToken', signupResult.body.refreshToken, 7);
+    this.setTokenCookie(res, 'accessToken', signupResult.body.accessToken, 1);
 
     return signupResult;
   }
@@ -56,8 +51,8 @@ export class AuthController {
     const result = await this.authService.login(loginInfo);
     console.log(result);
 
-    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
-    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
+    this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
 
     return result;
   }
@@ -72,8 +67,8 @@ export class AuthController {
       req.cookies.refreshToken,
     );
 
-    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
-    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
+    this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
 
     return result;
   }
@@ -95,8 +90,8 @@ export class AuthController {
   ) {
     const result = await this.authService.googleLogin(googleLoginDto);
 
-    this.setTokenCookie(res, 'refreshToken', result.body.refresh_token, 7);
-    this.setTokenCookie(res, 'accessToken', result.body.access_token, 1);
+    this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
+    this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
 
     return result;
   }

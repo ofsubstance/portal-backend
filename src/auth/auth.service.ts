@@ -29,7 +29,7 @@ export class AuthService {
   ) {}
 
   async getTokens(userId: string, role: string) {
-    const [access_token, refresh_token] = await Promise.all([
+    const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, role },
         {
@@ -47,8 +47,8 @@ export class AuthService {
     ]);
 
     const tokens = {
-      access_token,
-      refresh_token,
+      accessToken,
+      refreshToken,
     };
 
     return tokens;
@@ -133,8 +133,8 @@ export class AuthService {
       const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
       return successHandler('Login successful', {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         user: {
           id: userInfo.id,
           name: userInfo.name,
