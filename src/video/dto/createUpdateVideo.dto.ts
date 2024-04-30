@@ -6,6 +6,10 @@ export class CreateUpdateVideoDto {
   @IsString()
   readonly video_url: string;
 
+  @ApiProperty()
+  @IsString()
+  readonly trailer_url: string;
+
   @ApiProperty({ type: 'string', format: 'binary' })
   readonly thumbnail: File;
 

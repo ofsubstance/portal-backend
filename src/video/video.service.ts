@@ -17,7 +17,7 @@ export class VideoService {
   }
 
   async findVideoById(id: string) {
-    const video = await this.videoRepo.findBy({ id: id });
+    const video = await this.videoRepo.findOneBy({ id: id });
     return video;
   }
 
@@ -52,18 +52,18 @@ export class VideoService {
       randomUUID(),
     );
 
-    const video_url = cloudinaryUpload.secure_url;
+    const thumbnail_url = cloudinaryUpload.secure_url;
 
     const video = this.videoRepo.create({
       ...attributes,
-      video_url: video_url,
+      thumbnail_url: thumbnail_url,
     });
     const newVideo = await this.videoRepo.save(video);
     return successHandler('Video created successfully', newVideo);
   }
 
   async updateVideo(id: string, attributes: Partial<Video>) {
-    const video = await this.videoRepo.findBy({ id: id });
+    const video = await this.videoRepo.findOneBy({ id: id });
     if (!video) return errorhandler(404, 'Video not found');
     Object.assign(video, attributes);
     const updatedVideo = await this.videoRepo.save(video);

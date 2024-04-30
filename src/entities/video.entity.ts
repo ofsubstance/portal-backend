@@ -11,12 +11,15 @@ export class Video extends BaseEntity {
   video_url: string;
 
   @Column()
+  trailer_url: string;
+
+  @Column()
   thumbnail_url: string;
 
   @Column({ length: 500 })
   title: string;
 
-  @Column('text', { array: true })
+  @Column('text')
   genre: string;
 
   @Column()

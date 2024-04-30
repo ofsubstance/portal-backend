@@ -12,16 +12,17 @@ export const CloudinaryUpload = async (
   });
 
   try {
-    // Check if file.buffer is available for in-memory file uploads
-    const fileToUpload = file.buffer
-      ? { resource_type: 'auto', file: file.buffer }
-      : file.path;
+    console.log(file);
+    const base64String = file.buffer.toString('base64');
 
-    const imageUpload = await cloudinary.uploader.upload(fileToUpload, {
-      folder: folderName,
-      public_id: pub_id,
-      overwrite: true,
-    });
+    const imageUpload = await cloudinary.uploader.upload(
+      `data:${file.mimetype};base64,${base64String}`,
+      {
+        folder: folderName,
+        public_id: pub_id,
+        overwrite: true,
+      },
+    );
 
     console.log(imageUpload);
     return imageUpload;

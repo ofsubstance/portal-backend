@@ -58,7 +58,7 @@ export class VideoController {
   @Patch('/:id')
   updateVideo(
     @Param('id') id: string,
-    @Body() attributes: CreateUpdateVideoDto,
+    @Body() attributes: Partial<CreateUpdateVideoDto>,
   ) {
     return this.videoService.updateVideo(id, attributes);
   }
