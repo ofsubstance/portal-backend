@@ -1,13 +1,13 @@
 import { Entity, ManyToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { User } from './users.entity';
 import { Video } from './video.entity';
-import { Viewer } from './viewer.entity';
 
 @Entity()
 export class VideoPurchase extends BaseEntity {
   @ManyToOne(() => Video, (video) => video.videoPurchases)
   video: Video;
 
-  @ManyToOne(() => Viewer, (viewer) => viewer.videoPurchases)
-  viewer: Viewer;
+  @ManyToOne(() => User, (user) => user.videoPurchases)
+  user: User;
 }

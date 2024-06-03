@@ -1,7 +1,7 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { Download } from './download.entity';
 import { Feedback } from './feedback.entity';
+import { Playlist } from './playlist.entity';
 import { VideoPurchase } from './videopurchase.entity';
 import { Watchtime } from './watchtime.entity';
 
@@ -48,9 +48,6 @@ export class Video extends BaseEntity {
   })
   watchtimes: Watchtime[];
 
-  @OneToMany(() => Download, (download) => download.video, { nullable: true })
-  downloads: Download[];
-
   @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
   feedbacks: Feedback[];
 
@@ -58,4 +55,7 @@ export class Video extends BaseEntity {
     nullable: true,
   })
   videoPurchases: VideoPurchase[];
+
+  @ManyToMany(() => Playlist, (playlist) => playlist.videos)
+  playlists: Playlist[];
 }

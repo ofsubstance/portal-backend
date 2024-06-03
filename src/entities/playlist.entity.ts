@@ -10,7 +10,10 @@ export class Playlist extends BaseEntity {
   @Column({ nullable: true })
   description: string;
 
-  @ManyToMany(() => Video)
+  @Column({ nullable: true })
+  tag: string;
+
+  @ManyToMany(() => Video, (video) => video.playlists, { cascade: true })
   @JoinTable()
   videos: Video[];
 }
