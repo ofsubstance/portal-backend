@@ -34,6 +34,11 @@ export class VideoController {
     return this.videoService.findVideoById(id);
   }
 
+  @Get('/library/:userId')
+  findPurchasedVideos(@Param('userId') userId: string) {
+    return this.videoService.findPurchasedVideos(userId);
+  }
+
   @Get('/genre/:genre')
   findVideoByGenre(@Param('genre') genre: string) {
     return this.videoService.findVideosByGenre(genre);
