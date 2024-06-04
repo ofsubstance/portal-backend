@@ -18,7 +18,7 @@ import { PlaylistService } from './playlist.service';
 
 @Catch()
 @ApiTags('Playlists')
-@Controller('playlist')
+@Controller('playlists')
 export class PlaylistController {
   constructor(private playlistService: PlaylistService) {}
 
@@ -35,7 +35,7 @@ export class PlaylistController {
   }
 
   @Public()
-  @Get('/all')
+  @Get('/')
   async findAllPlaylists() {
     return await this.playlistService.findAllPlaylists();
   }

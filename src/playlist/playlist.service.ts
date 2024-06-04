@@ -34,7 +34,9 @@ export class PlaylistService {
   }
 
   async findAllPlaylists() {
-    const playlists = await this.playlistRepo.find();
+    const playlists = await this.playlistRepo.find({
+      relations: ['videos'],
+    });
 
     return successHandler('Playlists found', playlists);
   }
