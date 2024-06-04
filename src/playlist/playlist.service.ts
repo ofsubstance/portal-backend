@@ -33,26 +33,37 @@ export class PlaylistService {
     return successHandler('Playlist created', playlist);
   }
 
-  findAllPlaylists() {
-    const playlists = this.playlistRepo.find();
+  async findAllPlaylists() {
+    const playlists = await this.playlistRepo.find();
 
     return successHandler('Playlists found', playlists);
   }
 
-  findPlaylist(id: string) {
-    const playlist = this.playlistRepo.findOneBy({ id: id });
+  async findPlaylist(id: string) {
+    const playlist = await this.playlistRepo.findOneBy({ id: id });
 
     return successHandler('Playlist found', playlist);
   }
 
-  findCarouselList() {
-    const carouselList = this.playlistRepo.findOneBy({ tag: Tag.Carousel });
+  async findCarouselList() {
+    const carouselList = await this.playlistRepo.findOneBy({
+      tag: Tag.Carousel,
+    });
 
     return successHandler('Carousel list found', carouselList);
   }
 
-  findTopPicks() {
-    const topPicks = this.playlistRepo.findOneBy({ tag: Tag.TopPicks });
+  async findPlaylistByTag(tag: Tag) {
+    const playlist = await this.playlistRepo.findOne({
+      where: { tag: tag },
+      relations: ['videos'],
+    });
+
+    return successHandler('Playlist found', playlist);
+  }
+
+  async findTopPicks() {
+    const topPicks = await this.playlistRepo.findOneBy({ tag: Tag.TopPicks });
 
     return successHandler('Top picks found', topPicks);
   }

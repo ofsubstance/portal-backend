@@ -12,6 +12,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/decorators/auth.decorator';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
+import { Tag } from 'src/enums/tag.enum';
 import { CreateUpdatePlaylistDto } from './dto/playlist.dto';
 import { PlaylistService } from './playlist.service';
 
@@ -23,46 +24,52 @@ export class PlaylistController {
 
   @Public()
   @Get('/carousel')
-  findCarouselList() {
-    return this.playlistService.findCarouselList();
+  async findCarouselList() {
+    return await this.playlistService.findCarouselList();
   }
 
   @Public()
   @Get('/top-picks')
-  findTopPicks() {
-    return this.playlistService.findTopPicks();
+  async findTopPicks() {
+    return await this.playlistService.findTopPicks();
   }
 
-  @Roles(Role.Admin)
+  @Public()
   @Get('/all')
-  findAllPlaylists() {
-    return this.playlistService.findAllPlaylists();
+  async findAllPlaylists() {
+    return await this.playlistService.findAllPlaylists();
+  }
+
+  @Public()
+  @Get('/tag/:tag')
+  async findPlaylistByTag(@Param('tag') tag: Tag) {
+    return await this.playlistService.findPlaylistByTag(tag);
   }
 
   @Roles(Role.Admin)
   @Get('/:id')
-  findPlaylist(@Param('id') id: string) {
-    return this.playlistService.findPlaylist(id);
+  async findPlaylist(@Param('id') id: string) {
+    return await this.playlistService.findPlaylist(id);
   }
 
   @Roles(Role.Admin)
   @Post()
-  createPlaylist(@Body() playlist: CreateUpdatePlaylistDto) {
-    return this.playlistService.createPlaylist(playlist);
+  async createPlaylist(@Body() playlist: CreateUpdatePlaylistDto) {
+    return await this.playlistService.createPlaylist(playlist);
   }
 
   @Roles(Role.Admin)
   @Patch('/:id')
-  updatePlaylist(
+  async updatePlaylist(
     @Param('id') id: string,
     @Body() playlist: CreateUpdatePlaylistDto,
   ) {
-    return this.playlistService.updatePlaylist(id, playlist);
+    return await this.playlistService.updatePlaylist(id, playlist);
   }
 
   @Roles(Role.Admin)
   @Delete('/:id')
-  removePlaylist(@Param('id') id: string) {
-    return this.playlistService.removePlaylist(id);
+  async removePlaylist(@Param('id') id: string) {
+    return await this.playlistService.removePlaylist(id);
   }
 }
