@@ -65,11 +65,13 @@ export class AuthService {
     const encPassword = await this.passwordStrategy.hashPassword(
       signupUserDto.password,
     );
+
     newUser = this.userRepo.create({
       ...signupUserDto,
       password: encPassword,
       role: userRole,
     });
+
     await this.userRepo.save(newUser);
 
     delete newUser.password;
@@ -78,34 +80,37 @@ export class AuthService {
       email: signupUserDto.email,
       password: signupUserDto.password,
     });
+
     return loginAttempt;
   }
 
   async login(loginInfo: CredLoginDto) {
     const [userInfo] = await this.usersService.findUserByEmail(loginInfo.email);
+
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
+
     if (userInfo.status === 'inactive') {
       throw new BadRequestException('Account Restricted!');
     }
+
     const isPasswordValid = await bcrypt.compare(
       loginInfo.password,
       userInfo.password,
     );
+
     if (!isPasswordValid) {
       throw new BadRequestException('Invalid password');
     }
+
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
+
+    delete userInfo.password;
 
     return successHandler('Login successful', {
       ...tokens,
-      user: {
-        id: userInfo.id,
-        name: userInfo.name,
-        email: userInfo.email,
-        role: userInfo.role,
-      },
+      user: userInfo,
     });
   }
 
@@ -132,15 +137,12 @@ export class AuthService {
 
       const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
+      delete userInfo.password;
+
       return successHandler('Login successful', {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        user: {
-          id: userInfo.id,
-          name: userInfo.name,
-          email: userInfo.email,
-          role: userInfo.role,
-        },
+        user: userInfo,
       });
     } catch (err) {
       throw new BadRequestException(err);
@@ -162,14 +164,11 @@ export class AuthService {
 
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
+    delete userInfo.password;
+
     return successHandler('Login successful', {
       ...tokens,
-      user: {
-        id: userInfo.id,
-        name: userInfo.name,
-        email: userInfo.email,
-        role: userInfo.role,
-      },
+      user: userInfo,
     });
   }
 }
