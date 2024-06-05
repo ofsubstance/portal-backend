@@ -37,7 +37,7 @@ export class AuthController {
       expires: new Date(new Date().setDate(new Date().getDate() + expiresIn)),
       sameSite: 'none',
       httpOnly: true,
-      secure: false,
+      secure: true,
     });
   }
 
@@ -49,7 +49,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(loginInfo);
-    console.log(result);
 
     this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
     this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
