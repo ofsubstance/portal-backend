@@ -1,9 +1,9 @@
-import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { Feedback } from './feedback.entity';
-import { Playlist } from './playlist.entity';
-import { VideoPurchase } from './videopurchase.entity';
-import { Watchtime } from './watchtime.entity';
+// import { Feedback } from './feedback.entity';
+// import { Playlist } from './playlist.entity';
+// import { VideoPurchase } from './videopurchase.entity';
+// import { Watchtime } from './watchtime.entity';
 
 @Entity()
 export class Video extends BaseEntity {
@@ -43,19 +43,19 @@ export class Video extends BaseEntity {
   @Column({ nullable: true, default: 0 })
   cost: number;
 
-  @OneToMany(() => Watchtime, (watchtime) => watchtime.video, {
-    nullable: true,
-  })
-  watchtimes: Watchtime[];
+  // @OneToMany(() => Watchtime, (watchtime) => watchtime.video, {
+  //   nullable: true,
+  // })
+  // watchtimes: Watchtime[];
 
-  @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
-  feedbacks: Feedback[];
+  // @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
+  // feedbacks: Feedback[];
 
-  @OneToMany(() => VideoPurchase, (videoPurchase) => videoPurchase.video, {
-    nullable: true,
-  })
-  videoPurchases: VideoPurchase[];
+  // @OneToMany(() => VideoPurchase, (videoPurchase) => videoPurchase.video, {
+  //   nullable: true,
+  // })
+  // videoPurchases: VideoPurchase[];
 
-  @ManyToMany(() => Playlist, (playlist) => playlist.videos)
-  playlists: Playlist[];
+  // @ManyToMany(() => Playlist, (playlist) => playlist.videos)
+  // playlists: Playlist[];
 }

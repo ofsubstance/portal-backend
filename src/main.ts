@@ -3,12 +3,12 @@ import * as cookieParser from 'cookie-parser';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { HttpExceptionFilter } from './exception-filters/http.exception-filter';
 import { NestFactory } from '@nestjs/core';
-import { flattenValidationErrors } from './utils/validation.util';
 import { json } from 'express';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './exception-filters/http.exception-filter';
+import { flattenValidationErrors } from './utils/validation.util';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,11 +16,10 @@ async function bootstrap() {
   const configService = app.get<ConfigService>(ConfigService);
 
   app.enableCors({
-    origin: configService.get('FRONTEND_URL'),
+    origin: 'http://localhost:5173', // Specify the frontend origin here
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    credentials: true,
+    credentials: true, // Allow credentials (cookies, HTTP authentication)
   });
-
   app.useGlobalPipes(
     new ValidationPipe({
       enableDebugMessages: true,

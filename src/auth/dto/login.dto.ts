@@ -14,9 +14,9 @@ export class CredLoginDto {
 export class GoogleLoginDto {
   @ApiProperty({ example: 'client@gmail.com' })
   @IsEmail()
-  email: string;
+  readonly email: string;
 
   @ApiProperty({ example: 'client' })
   @IsString()
-  name: string;
+  readonly name: string;
 }

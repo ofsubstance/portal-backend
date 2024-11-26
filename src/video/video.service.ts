@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { VideoPurchase } from 'src/entities/videopurchase.entity';
 import { CloudinaryUpload } from 'src/utils/coudinary-upload';
 import { errorhandler, successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
@@ -10,11 +9,7 @@ import { CreateUpdateVideoDto } from './dto/createUpdateVideo.dto';
 
 @Injectable()
 export class VideoService {
-  constructor(
-    @InjectRepository(Video) private videoRepo: Repository<Video>,
-    @InjectRepository(VideoPurchase)
-    private videoPurchaseRepo: Repository<VideoPurchase>,
-  ) {}
+  constructor(@InjectRepository(Video) private videoRepo: Repository<Video>) {}
 
   async findAllVideos() {
     const videos = await this.videoRepo.find();
@@ -22,31 +17,31 @@ export class VideoService {
   }
 
   async findVideoById(id: string) {
-    const video = await this.videoRepo.findOneBy({ id: id });
-    return successHandler('Video found', video);
-  }
+    //   const video = await this.videoRepo.findOneBy({ id: id });
+    //   return successHandler('Video found', video);
+    // }
 
-  async findPurchasedVideos(userId: string) {
-    const vidsPurchased = await this.videoPurchaseRepo.find({
-      relations: ['user', 'video'],
-      where: {
-        user: {
-          id: userId,
-        },
-      },
-    });
+    // async findPurchasedVideos(userId: string) {
+    //   const vidsPurchased = await this.videoPurchaseRepo.find({
+    //     relations: ['user', 'video'],
+    //     where: {
+    //       user: {
+    //         id: userId,
+    //       },
+    //     },
+    //   });
 
-    const videosPurchased = vidsPurchased.map((purchase) => purchase.video);
+    //   const videosPurchased = vidsPurchased.map((purchase) => purchase.video);
 
-    const vidoes = await this.videoRepo.find();
+    //   const vidoes = await this.videoRepo.find();
 
-    const lockedVideos = vidoes.filter(
-      (video) => !videosPurchased.includes(video),
-    );
+    //   const lockedVideos = vidoes.filter(
+    //     (video) => !videosPurchased.includes(video),
+    //   );
 
     return successHandler('Videos found', {
-      purchasedVideos: videosPurchased,
-      lockedVideos: lockedVideos,
+      purchasedVideos: [],
+      lockedVideos: [],
     });
   }
 
