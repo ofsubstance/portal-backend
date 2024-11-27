@@ -10,6 +10,10 @@ export class CreateUpdateVideoDto {
   @IsString()
   readonly trailer_url: string;
 
+  @ApiProperty()
+  @IsString()
+  readonly preroll_url: string;
+
   @ApiProperty({ type: 'string', format: 'binary' })
   readonly thumbnail: File;
 
@@ -43,8 +47,4 @@ export class CreateUpdateVideoDto {
   @ApiProperty({ example: 'Random about' })
   @IsString()
   readonly impact: string;
-
-  @ApiProperty({ example: 10 })
-  @IsString()
-  readonly cost: number;
 }

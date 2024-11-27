@@ -14,6 +14,9 @@ export class Video extends BaseEntity {
   trailer_url: string;
 
   @Column()
+  preroll_url: string;
+
+  @Column()
   thumbnail_url: string;
 
   @Column({ length: 500 })
@@ -39,9 +42,6 @@ export class Video extends BaseEntity {
 
   @Column({ nullable: true })
   impact: string;
-
-  @Column({ nullable: true, default: 0 })
-  cost: number;
 
   // @OneToMany(() => Watchtime, (watchtime) => watchtime.video, {
   //   nullable: true,
