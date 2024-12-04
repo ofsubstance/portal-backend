@@ -34,11 +34,6 @@ export class VideoController {
     return this.videoService.findVideoById(id);
   }
 
-  @Get('/library/:userId')
-  findPurchasedVideos(@Param('userId') userId: string) {
-    return this.videoService.findPurchasedVideos(userId);
-  }
-
   @Get('/genre/:genre')
   findVideoByGenre(@Param('genre') genre: string) {
     return this.videoService.findVideosByGenre(genre);
@@ -49,7 +44,6 @@ export class VideoController {
     return this.videoService.searchVideos(keyword);
   }
 
-  @Public()
   @Post()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('thumbnail'))
@@ -63,9 +57,20 @@ export class VideoController {
   @Patch('/:id')
   updateVideo(
     @Param('id') id: string,
+
     @Body() attributes: Partial<CreateUpdateVideoDto>,
   ) {
     return this.videoService.updateVideo(id, attributes);
+  }
+
+  @Patch('/:id')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('thumbnail'))
+  updateVideoThumbnail(
+    @Param('id') id: string,
+    @UploadedFile() thumbnail: Express.Multer.File,
+  ) {
+    return this.videoService.updateVideoThumbnail(thumbnail, id);
   }
 
   @Delete('/:id')

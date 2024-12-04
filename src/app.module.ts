@@ -9,25 +9,31 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import configuration from './config/configuration';
+import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
 import { ExceptionFilterModule } from './exception-filters/exception-filter.module';
-import { FinanceModule } from './finance/finance.module';
+
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { PlaylistModule } from './playlist/playlist.module';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
+import { SharelinksModule } from './sharelinks/sharelinks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.DATABASE_URL,
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
       synchronize: true,
       ssl: {
-        rejectUnauthorized: false,
+        ca: process.env.DB_CA,
+        rejectUnauthorized: true,
       },
     }),
     ConfigModule.forRoot({
@@ -49,14 +55,14 @@ import { VideoModule } from './video/video.module';
     AppConfigModule,
     ExceptionFilterModule,
     AnalyticsModule,
-    FinanceModule,
     VideoModule,
-    PlaylistModule,
     EntitiesModule,
+    SharelinksModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    EmailService,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

@@ -1,4 +1,14 @@
-import { Body, Catch, Controller, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Catch,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Public } from 'src/decorators/auth.decorator';
@@ -13,6 +23,13 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @Get('/verify-email')
+  async verifyEmail(@Req() req: Request) {
+    const { token } = req.query;
+    return this.authService.verifyEmail(token as string);
+  }
+
+  @Public()
   @Post('/signup')
   async signUp(
     @Req() req: Request,
@@ -20,10 +37,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const signupResult = await this.authService.signUp(signUpDto);
-
-    this.setTokenCookie(res, 'refreshToken', signupResult.body.refreshToken, 7);
-    this.setTokenCookie(res, 'accessToken', signupResult.body.accessToken, 1);
-
     return signupResult;
   }
 
@@ -39,6 +52,12 @@ export class AuthController {
       httpOnly: true,
       secure: true,
     });
+  }
+
+  @Public()
+  @Post('/resendVerification')
+  async resendVerificationEmail(@Body('email') email: string) {
+    return await this.authService.resendVerificationEmail(email);
   }
 
   @Public()
@@ -93,5 +112,20 @@ export class AuthController {
     this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
 
     return result;
+  }
+
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    return await this.authService.forgotPassword(email);
+  }
+
+  @Public()
+  @Put('reset-password/:token')
+  async resetPassword(
+    @Param('token') token: string,
+    @Body('password') newPassword: string,
+  ) {
+    return await this.authService.resetPassword(token, newPassword);
   }
 }

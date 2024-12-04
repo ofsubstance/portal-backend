@@ -1,15 +1,18 @@
 import { Role } from 'src/enums/role.enum';
 import { Status } from 'src/enums/status.enum';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { Feedback } from './feedback.entity';
-import { VideoPurchase } from './videopurchase.entity';
-import { Watchtime } from './watchtime.entity';
+import { Feedback } from './feedbacks.entity';
+import { ShareableLink } from './sharable_links.entity';
+import { Profile } from './user_profiles.entity';
 
 @Entity()
 export class User extends BaseEntity {
   @Column({ length: 500 })
-  name: string;
+  firstname: string;
+
+  @Column({ length: 500 })
+  lastname: string;
 
   @Column()
   email: string;
@@ -17,25 +20,40 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   password: string;
 
+  @Column({ nullable: true })
+  phone: string;
+
+  @Column({ nullable: true })
+  last_login: Date;
+
   @Column({ default: Role.User })
   role: Role;
 
-  @Column({ default: Status.Active })
+  @Column({ default: Status.Unverified })
   status: Status;
 
-  @Column({ nullable: true, default: 0 })
-  wallet: number;
+  @Column({ default: false })
+  sms_consent: boolean;
 
-  @OneToMany(() => Feedback, (feedback) => feedback.user, { nullable: true })
+  @Column({ default: false })
+  email_consent: boolean;
+
+  @Column({ nullable: true })
+  email_verification_token: string;
+
+  @Column({ nullable: true })
+  reset_pass_token: string;
+
+  @Column({ nullable: true })
+  reset_pass_token_expiry: Date;
+
+  @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
+  @JoinColumn()
+  profile: Profile;
+
+  @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
   feedbacks: Feedback[];
 
-  @OneToMany(() => Watchtime, (watchtime) => watchtime.user, {
-    nullable: true,
-  })
-  watchtimes: Watchtime[];
-
-  @OneToMany(() => VideoPurchase, (videoPurchase) => videoPurchase.user, {
-    nullable: true,
-  })
-  videoPurchases: VideoPurchase[];
+  @OneToMany(() => ShareableLink, (link) => link.user)
+  shareableLinks: ShareableLink[];
 }

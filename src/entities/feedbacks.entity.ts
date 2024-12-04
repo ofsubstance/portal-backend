@@ -1,14 +1,14 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { User } from './users.entity';
-import { Video } from './video.entity';
+import { Video } from './videos.entity';
 
 @Entity()
 export class Feedback extends BaseEntity {
   @ManyToOne(() => Video, (video) => video.feedbacks)
   video: Video;
 
-  @ManyToOne(() => User, (user) => user.feedbacks)
+  @ManyToOne(() => User, (user) => user.feedbacks, { nullable: true })
   user: User;
 
   @Column({ nullable: true })

@@ -1,7 +1,5 @@
 export enum Status {
+  Unverified = 'unverified',
   Active = 'active',
   Inactive = 'inactive',
-  Waiting = 'waiting',
-  Trial = 'trial',
-  Lead = 'lead',
 }
