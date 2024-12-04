@@ -12,11 +12,12 @@ import configuration from './config/configuration';
 import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
 import { ExceptionFilterModule } from './exception-filters/exception-filter.module';
-import { FinanceModule } from './finance/finance.module';
+
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
+import { SharelinksModule } from './sharelinks/sharelinks.module';
 
 @Module({
   imports: [
@@ -54,9 +55,9 @@ import { VideoModule } from './video/video.module';
     AppConfigModule,
     ExceptionFilterModule,
     AnalyticsModule,
-    FinanceModule,
     VideoModule,
     EntitiesModule,
+    SharelinksModule,
   ],
   controllers: [AppController],
   providers: [

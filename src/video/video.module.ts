@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Video } from '../entities/video.entity';
+import { Video } from '../entities/videos.entity';
 import { VideoController } from './video.controller';
 import { VideoService } from './video.service';
 

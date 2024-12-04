@@ -1,5 +1,7 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { Feedback } from './feedbacks.entity';
+import { ShareableLink } from './sharable_links.entity';
 // import { Feedback } from './feedback.entity';
 // import { Playlist } from './playlist.entity';
 // import { VideoPurchase } from './videopurchase.entity';
@@ -48,8 +50,11 @@ export class Video extends BaseEntity {
   // })
   // watchtimes: Watchtime[];
 
-  // @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
-  // feedbacks: Feedback[];
+  @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
+  feedbacks: Feedback[];
+
+  @OneToMany(() => ShareableLink, (link) => link.user)
+  shareableLinks: ShareableLink[];
 
   // @OneToMany(() => VideoPurchase, (videoPurchase) => videoPurchase.video, {
   //   nullable: true,

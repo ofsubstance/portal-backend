@@ -1,7 +1,9 @@
 import { Role } from 'src/enums/role.enum';
 import { Status } from 'src/enums/status.enum';
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { Feedback } from './feedbacks.entity';
+import { ShareableLink } from './sharable_links.entity';
 import { Profile } from './user_profiles.entity';
 
 @Entity()
@@ -46,6 +48,12 @@ export class User extends BaseEntity {
   reset_pass_token_expiry: Date;
 
   @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
-  @JoinColumn() // This is the owning side of the relationship
+  @JoinColumn()
   profile: Profile;
+
+  @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
+  feedbacks: Feedback[];
+
+  @OneToMany(() => ShareableLink, (link) => link.user)
+  shareableLinks: ShareableLink[];
 }
