@@ -45,6 +45,9 @@ export class Video extends BaseEntity {
   @Column({ nullable: true })
   impact: string;
 
+  @Column({ nullable: true, default: false })
+  slideshow: boolean;
+
   // @OneToMany(() => Watchtime, (watchtime) => watchtime.video, {
   //   nullable: true,
   // })
