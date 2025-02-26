@@ -2,6 +2,7 @@ import { Role } from 'src/enums/role.enum';
 import { Status } from 'src/enums/status.enum';
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { Comment } from './comments.entity';
 import { Feedback } from './feedbacks.entity';
 import { ShareableLink } from './sharable_links.entity';
 import { Profile } from './user_profiles.entity';
@@ -53,6 +54,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
   feedbacks: Feedback[];
+
+  @OneToMany(() => Comment, (comment) => comment.user, { nullable: true })
+  comments: Comment[];
 
   @OneToMany(() => ShareableLink, (link) => link.user)
   shareableLinks: ShareableLink[];

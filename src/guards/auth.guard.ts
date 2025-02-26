@@ -40,9 +40,13 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get('ACCESS_TOKEN_SECRET'),
       });
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
-      request['user'] = payload;
+
+      // Transform the payload to map 'sub' to 'id' for easier access in controllers
+      request['user'] = {
+        ...payload,
+        id: payload.sub, // Add id property that maps to sub
+        role: payload.role, // Ensure role is explicitly included
+      };
     } catch {
       throw new UnauthorizedException();
     }

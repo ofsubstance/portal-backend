@@ -8,6 +8,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CommentsModule } from './comments/comments.module';
 import configuration from './config/configuration';
 import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
@@ -15,9 +16,9 @@ import { ExceptionFilterModule } from './exception-filters/exception-filter.modu
 
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { SharelinksModule } from './sharelinks/sharelinks.module';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
-import { SharelinksModule } from './sharelinks/sharelinks.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SharelinksModule } from './sharelinks/sharelinks.module';
     VideoModule,
     EntitiesModule,
     SharelinksModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [

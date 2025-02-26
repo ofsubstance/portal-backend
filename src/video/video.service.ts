@@ -26,6 +26,14 @@ export class VideoService {
     return successHandler('Videos found', videos);
   }
 
+  async findVideosByTag(tag: string) {
+    const videos = await this.videoRepo
+      .createQueryBuilder('video')
+      .where(':tag = ANY(video.tags)', { tag: tag })
+      .getMany();
+    return successHandler('Videos found', videos);
+  }
+
   async searchVideos(keyword: string) {
     const videos = await this.videoRepo
       .createQueryBuilder('video')
@@ -38,6 +46,7 @@ export class VideoService {
       })
       .orWhere('video.theme LIKE :keyword', { keyword: `%${keyword}%` })
       .orWhere('video.impact LIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere(':keyword = ANY(video.tags)', { keyword: keyword })
       .getMany();
     return successHandler('Videos found', videos);
   }

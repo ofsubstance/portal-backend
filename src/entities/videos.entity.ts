@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { Comment } from './comments.entity';
 import { Feedback } from './feedbacks.entity';
 import { ShareableLink } from './sharable_links.entity';
 // import { Feedback } from './feedback.entity';
@@ -48,6 +49,9 @@ export class Video extends BaseEntity {
   @Column({ nullable: true, default: false })
   slideshow: boolean;
 
+  @Column('text', { array: true, nullable: true, default: [] })
+  tags: string[];
+
   // @OneToMany(() => Watchtime, (watchtime) => watchtime.video, {
   //   nullable: true,
   // })
@@ -55,6 +59,9 @@ export class Video extends BaseEntity {
 
   @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
   feedbacks: Feedback[];
+
+  @OneToMany(() => Comment, (comment) => comment.video, { nullable: true })
+  comments: Comment[];
 
   @OneToMany(() => ShareableLink, (link) => link.user)
   shareableLinks: ShareableLink[];

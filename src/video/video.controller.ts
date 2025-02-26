@@ -39,6 +39,11 @@ export class VideoController {
     return this.videoService.findVideosByGenre(genre);
   }
 
+  @Get('/tag/:tag')
+  findVideoByTag(@Param('tag') tag: string) {
+    return this.videoService.findVideosByTag(tag);
+  }
+
   @Get('/search/:keyword')
   findVideoBySearch(@Param('keyword') keyword: string) {
     return this.videoService.searchVideos(keyword);

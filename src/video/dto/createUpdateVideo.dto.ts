@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateUpdateVideoDto {
   @ApiProperty()
@@ -47,4 +47,9 @@ export class CreateUpdateVideoDto {
   @ApiProperty({ example: 'Random about' })
   @IsString()
   readonly impact: string;
+
+  @ApiProperty({ example: ['educational', 'inspirational'], required: false })
+  @IsArray()
+  @IsOptional()
+  readonly tags?: string[];
 }
