@@ -5,6 +5,7 @@ import { User } from 'src/entities/users.entity';
 import { UsersModule } from 'src/users/users.module';
 
 import { EmailService } from 'src/email.service';
+import { LoginEvent } from 'src/entities/login_events.entity';
 import { Profile } from 'src/entities/user_profiles.entity';
 import { PasswordStrategy } from 'src/utils/password.strategy';
 import { AuthController } from './auth.controller';
@@ -13,7 +14,7 @@ import { AuthService } from './auth.service';
 @Module({
   imports: [
     UsersModule,
-    TypeOrmModule.forFeature([User, Profile]),
+    TypeOrmModule.forFeature([User, Profile, LoginEvent]),
     JwtModule.register({}),
   ],
   providers: [AuthService, EmailService, PasswordStrategy],

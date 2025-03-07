@@ -4,6 +4,7 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Comment } from './comments.entity';
 import { Feedback } from './feedbacks.entity';
+import { LoginEvent } from './login_events.entity';
 import { ShareableLink } from './sharable_links.entity';
 import { Profile } from './user_profiles.entity';
 
@@ -60,4 +61,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => ShareableLink, (link) => link.user)
   shareableLinks: ShareableLink[];
+
+  @OneToMany(() => LoginEvent, (loginEvent) => loginEvent.user)
+  loginEvents: LoginEvent[];
 }

@@ -67,7 +67,7 @@ export class AuthController {
     @Body() loginInfo: CredLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.login(loginInfo);
+    const result = await this.authService.login(loginInfo, req);
 
     this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
     this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);
@@ -106,7 +106,7 @@ export class AuthController {
     @Body() googleLoginDto: GoogleLoginDto,
     @Res({ passthrough: true }) res,
   ) {
-    const result = await this.authService.googleLogin(googleLoginDto);
+    const result = await this.authService.googleLogin(googleLoginDto, req);
 
     this.setTokenCookie(res, 'refreshToken', result.body.refreshToken, 7);
     this.setTokenCookie(res, 'accessToken', result.body.accessToken, 1);

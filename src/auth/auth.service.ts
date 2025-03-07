@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Req,
 } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { EmailService } from 'src/email.service';
+import { LoginEvent } from 'src/entities/login_events.entity';
 import { Profile } from 'src/entities/user_profiles.entity';
 import { User } from 'src/entities/users.entity';
 import { Role } from 'src/enums/role.enum';
@@ -28,6 +30,8 @@ export class AuthService {
     private usersService: UsersService,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Profile) private profileRepo: Repository<Profile>,
+    @InjectRepository(LoginEvent)
+    private loginEventRepo: Repository<LoginEvent>,
     private jwtService: JwtService,
     private passwordStrategy: PasswordStrategy,
     private configService: ConfigService,
@@ -159,18 +163,56 @@ export class AuthService {
     }
   }
 
-  async login(loginInfo: CredLoginDto) {
+  private async recordLoginEvent(
+    user: User,
+    successful: boolean,
+    loginMethod: string,
+    failureReason?: string,
+    @Req() req?: any,
+  ) {
+    console.log(user, successful, loginMethod, failureReason, req);
+    const loginEvent = this.loginEventRepo.create({
+      user,
+      userId: user.id,
+      timestamp: new Date(),
+      ipAddress: req?.ip,
+      userAgent: req?.headers['user-agent'],
+      deviceInfo: req?.headers['sec-ch-ua'],
+      loginMethod,
+      successful,
+      failureReason,
+    });
+    await this.loginEventRepo.save(loginEvent);
+  }
+
+  async login(loginInfo: CredLoginDto, @Req() req: any) {
     const [userInfo] = await this.usersService.findUserByEmail(loginInfo.email);
 
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
 
+    console.log(userInfo);
+
     if (userInfo.status === 'inactive') {
+      await this.recordLoginEvent(
+        userInfo,
+        false,
+        'credentials',
+        'Account Restricted',
+        req,
+      );
       throw new BadRequestException('Account Restricted!');
     }
 
     if (userInfo.status === 'unverified') {
+      await this.recordLoginEvent(
+        userInfo,
+        false,
+        'credentials',
+        'Account not verified',
+        req,
+      );
       return successHandler('Account not verified', {
         email: userInfo.email,
       });
@@ -181,9 +223,25 @@ export class AuthService {
       userInfo.password,
     );
 
+    console.log(isPasswordValid);
+
     if (!isPasswordValid) {
+      await this.recordLoginEvent(
+        userInfo,
+        false,
+        'credentials',
+        'Invalid password',
+        req,
+      );
       throw new BadRequestException('Invalid password');
     }
+
+    // Update the user's last_login field to the current date
+    userInfo.last_login = new Date();
+    await this.userRepo.save(userInfo);
+
+    // Record successful login event
+    await this.recordLoginEvent(userInfo, true, 'credentials', null, req);
 
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
@@ -230,7 +288,7 @@ export class AuthService {
     }
   }
 
-  async googleLogin(googleLoginDto: GoogleLoginDto) {
+  async googleLogin(googleLoginDto: GoogleLoginDto, @Req() req: any) {
     let [userInfo] = await this.usersService.findUserByEmail(
       googleLoginDto.email,
     );
@@ -242,6 +300,13 @@ export class AuthService {
       });
       userInfo = await this.userRepo.save(newUser);
     }
+
+    // Update the user's last_login field to the current date
+    userInfo.last_login = new Date();
+    await this.userRepo.save(userInfo);
+
+    // Record successful login event
+    await this.recordLoginEvent(userInfo, true, 'google', null, req);
 
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
 

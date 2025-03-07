@@ -16,6 +16,7 @@ import { ExceptionFilterModule } from './exception-filters/exception-filter.modu
 
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MetricsModule } from './metrics/metrics.module';
 import { SharelinksModule } from './sharelinks/sharelinks.module';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
@@ -60,6 +61,7 @@ import { VideoModule } from './video/video.module';
     EntitiesModule,
     SharelinksModule,
     CommentsModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [
