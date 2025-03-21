@@ -17,6 +17,7 @@ import { Profile } from 'src/entities/user_profiles.entity';
 import { User } from 'src/entities/users.entity';
 import { Role } from 'src/enums/role.enum';
 import { Status } from 'src/enums/status.enum';
+import { GoHighLevelService } from 'src/gohighlevel/gohighlevel.service';
 import { UsersService } from 'src/users/users.service';
 import { PasswordStrategy } from 'src/utils/password.strategy';
 import { successHandler } from 'src/utils/response.handler';
@@ -36,6 +37,7 @@ export class AuthService {
     private passwordStrategy: PasswordStrategy,
     private configService: ConfigService,
     private emailService: EmailService,
+    private goHighLevelService: GoHighLevelService,
   ) {}
 
   async getTokens(userId: string, role: string) {
@@ -111,6 +113,14 @@ export class AuthService {
     const createdUser = await this.userRepo.save(newUser);
 
     console.log(createdUser);
+
+    // Send user information to GoHighLevel
+    try {
+      await this.goHighLevelService.createContact(signupUserDto);
+    } catch (error) {
+      console.error('Error creating contact in GoHighLevel:', error);
+      // We don't want to fail the signup process if GHL integration fails
+    }
 
     delete newUser.password;
 
