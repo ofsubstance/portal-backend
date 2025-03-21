@@ -9,6 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/decorators/auth.decorator';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentStatusDto } from './dto/update-comment-status.dto';
@@ -23,6 +24,7 @@ export class CommentsController {
     return this.commentsService.createComment(req.user.id, createCommentDto);
   }
 
+  @Public()
   @Get()
   findAllComments(@Req() req) {
     return this.commentsService.findAllComments(req.user.id);
@@ -33,6 +35,7 @@ export class CommentsController {
     return this.commentsService.findCommentsByVideo(videoId, req.user.id);
   }
 
+  @Public()
   @Get('user/me')
   findMyComments(@Req() req) {
     return this.commentsService.findUserComments(req.user.id);

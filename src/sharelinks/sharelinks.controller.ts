@@ -69,11 +69,13 @@ export class SharelinksController {
     return await this.sharelinksService.getLinkAnalytics(linkId);
   }
 
+  @Public()
   @Get('unique/:uniqueLink')
   async findShareLinkByUniqueLink(@Param('uniqueLink') uniqueLink: string) {
     return await this.sharelinksService.getShareLinkByUniqueLink(uniqueLink);
   }
 
+  @Public()
   @Get('unique-id/:uniqueLinkId')
   async findShareLinkByUniqueLinkId(
     @Param('uniqueLinkId') uniqueLinkId: string,
@@ -83,11 +85,13 @@ export class SharelinksController {
     );
   }
 
+  @Public()
   @Get('user/:userId')
   async findShareLinkByUser(@Param('userId') userId: string) {
     return await this.sharelinksService.getShareLinkByUserId(userId);
   }
 
+  @Public()
   @Get(':id')
   async findShareLinkById(@Param('id') id: string) {
     return await this.sharelinksService.getShareLinkById(id);
