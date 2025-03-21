@@ -16,7 +16,10 @@ async function bootstrap() {
   const configService = app.get<ConfigService>(ConfigService);
 
   app.enableCors({
-    origin: 'http://localhost:5173', // Specify the frontend origin here
+    origin: [
+      'http://localhost:5173',
+      'https://of-substance-frontend.vercel.app',
+    ], // Allow both local and Vercel deployment
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true, // Allow credentials (cookies, HTTP authentication)
   });
