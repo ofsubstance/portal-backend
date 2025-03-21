@@ -13,6 +13,7 @@ import configuration from './config/configuration';
 import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
 import { ExceptionFilterModule } from './exception-filters/exception-filter.module';
+import { GoHighLevelModule } from './gohighlevel/gohighlevel.module';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -62,6 +63,7 @@ import { VideoModule } from './video/video.module';
     SharelinksModule,
     CommentsModule,
     MetricsModule,
+    GoHighLevelModule,
   ],
   controllers: [AppController],
   providers: [
