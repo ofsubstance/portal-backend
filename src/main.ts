@@ -21,6 +21,13 @@ async function bootstrap() {
       'https://of-substance-frontend.vercel.app',
     ], // Allow both local and Vercel deployment
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+    ],
     credentials: true, // Allow credentials (cookies, HTTP authentication)
   });
   app.useGlobalPipes(
