@@ -41,25 +41,14 @@ export class CommentsService {
     return successHandler('Comment created successfully', savedComment);
   }
 
-  async findAllComments(userId: string) {
-    // Check if user exists
-    const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) return errorhandler(404, 'User not found');
+  async findAllComments() {
+    
 
-    // If admin, return all comments
-    if (user.role === Role.Admin) {
       const comments = await this.commentRepo.find({
         relations: ['user', 'video'],
       });
       return successHandler('All comments retrieved', comments);
-    }
 
-    // If regular user, return only approved comments
-    const comments = await this.commentRepo.find({
-      where: { status: CommentStatus.Approved },
-      relations: ['user', 'video'],
-    });
-    return successHandler('Approved comments retrieved', comments);
   }
 
   async findCommentsByVideo(videoId: string, userId: string) {

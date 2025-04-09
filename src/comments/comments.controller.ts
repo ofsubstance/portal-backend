@@ -27,7 +27,7 @@ export class CommentsController {
   @Public()
   @Get()
   findAllComments(@Req() req) {
-    return this.commentsService.findAllComments(req.user.id);
+    return this.commentsService.findAllComments();
   }
 
   @Get('video/:videoId')
