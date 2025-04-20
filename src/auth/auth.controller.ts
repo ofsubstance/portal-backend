@@ -12,6 +12,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Public } from 'src/decorators/auth.decorator';
+import { UserSessionsService } from 'src/user-sessions/user-sessions.service';
 import { AuthService } from './auth.service';
 import { CredLoginDto, GoogleLoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/signup.dto';
@@ -20,7 +21,10 @@ import { SignUpDto } from './dto/signup.dto';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private userSessionsService: UserSessionsService,
+  ) {}
 
   @Public()
   @Get('/verify-email')
@@ -94,9 +98,15 @@ export class AuthController {
   @Public()
   @Post('/logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    // End the session if provided
+    const sessionId = req.body.sessionId;
+    if (sessionId) {
+      await this.userSessionsService.endSession(sessionId);
+    }
+
     res.clearCookie('refreshToken');
     res.clearCookie('accessToken');
-    return;
+    return { status: 'success' };
   }
 
   @Public()

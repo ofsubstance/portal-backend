@@ -3,9 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   endOfDay,
   endOfMonth,
+  endOfWeek,
   format,
   startOfDay,
   startOfMonth,
+  startOfWeek,
   subMonths,
 } from 'date-fns';
 import { LoginEvent } from 'src/entities/login_events.entity';
@@ -13,6 +15,7 @@ import { Profile } from 'src/entities/user_profiles.entity';
 import { User } from 'src/entities/users.entity';
 import { successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
+import { DurationSpan } from '../enums/duration-span.enum';
 
 @Injectable()
 export class MetricsService {
@@ -364,5 +367,240 @@ export class MetricsService {
         data,
       },
     );
+  }
+
+  async getActiveUsersTrend(
+    startDate?: Date,
+    endDate?: Date,
+    span: DurationSpan = DurationSpan.DAILY,
+  ) {
+    // Default dates if not provided
+    const queryEndDate = this.getEndDate(endDate, span);
+    const queryStartDate = this.getStartDate(startDate, span);
+
+    let dateFormat: string;
+    let groupByFormat: string;
+
+    switch (span) {
+      case DurationSpan.WEEKLY:
+        dateFormat = 'yyyy-ww'; // Year-WeekNumber
+        groupByFormat = "TO_CHAR(login_event.timestamp, 'YYYY-IW')";
+        break;
+      case DurationSpan.MONTHLY:
+        dateFormat = 'yyyy-MM'; // Year-Month
+        groupByFormat = "TO_CHAR(login_event.timestamp, 'YYYY-MM')";
+        break;
+      case DurationSpan.DAILY:
+      default:
+        dateFormat = 'yyyy-MM-dd'; // Year-Month-Day
+        groupByFormat = 'DATE(login_event.timestamp)';
+        break;
+    }
+
+    const activeUsers = await this.loginEventRepo
+      .createQueryBuilder('login_event')
+      .select(groupByFormat, 'period')
+      .addSelect('COUNT(DISTINCT "userId")', 'count')
+      .where('login_event.timestamp >= :startDate', {
+        startDate: queryStartDate,
+      })
+      .andWhere('login_event.timestamp <= :endDate', { endDate: queryEndDate })
+      .andWhere('login_event.successful = :successful', { successful: true })
+      .groupBy(groupByFormat)
+      .orderBy('period', 'ASC')
+      .getRawMany();
+
+    // Format data according to timespan
+    let periodLabel = 'date';
+    switch (span) {
+      case DurationSpan.WEEKLY:
+        periodLabel = 'week';
+        break;
+      case DurationSpan.MONTHLY:
+        periodLabel = 'month';
+        break;
+    }
+
+    const data = activeUsers.map((item) => ({
+      [periodLabel]: item.period,
+      count: parseInt(item.count),
+    }));
+
+    const spanLabel = span.toLowerCase();
+
+    return successHandler(
+      `${spanLabel} active users trend retrieved successfully`,
+      {
+        startDate: format(queryStartDate, dateFormat),
+        endDate: format(queryEndDate, dateFormat),
+        span: spanLabel,
+        data,
+      },
+    );
+  }
+
+  async getGrowthRateTrend(
+    startDate?: Date,
+    endDate?: Date,
+    span: DurationSpan = DurationSpan.MONTHLY,
+  ) {
+    // Default dates if not provided
+    const queryEndDate = this.getEndDate(endDate, span);
+    // Add one extra period at the start to calculate first period's growth rate
+    const queryStartDate = this.getAdditionalStartDate(startDate, span);
+
+    let groupByFormat: string;
+    let dateFormat: string;
+
+    switch (span) {
+      case DurationSpan.WEEKLY:
+        dateFormat = 'yyyy-ww'; // Year-WeekNumber
+        groupByFormat = "TO_CHAR(login_event.timestamp, 'YYYY-IW')";
+        break;
+      case DurationSpan.MONTHLY:
+        dateFormat = 'yyyy-MM'; // Year-Month
+        groupByFormat = "TO_CHAR(login_event.timestamp, 'YYYY-MM')";
+        break;
+      case DurationSpan.DAILY:
+        dateFormat = 'yyyy-MM-dd'; // Year-Month-Day
+        groupByFormat = 'DATE(login_event.timestamp)';
+        break;
+      default:
+        throw new Error('Invalid timespan');
+    }
+
+    const periodUsers = await this.loginEventRepo
+      .createQueryBuilder('login_event')
+      .select(groupByFormat, 'period')
+      .addSelect('COUNT(DISTINCT "userId")', 'count')
+      .where('login_event.timestamp >= :startDate', {
+        startDate: queryStartDate,
+      })
+      .andWhere('login_event.timestamp <= :endDate', { endDate: queryEndDate })
+      .andWhere('login_event.successful = :successful', { successful: true })
+      .groupBy(groupByFormat)
+      .orderBy('period', 'ASC')
+      .getRawMany();
+
+    // Calculate growth rates
+    const growthData = periodUsers.map((current, index) => {
+      const currentCount = parseInt(current.count);
+      const previousCount =
+        index > 0 ? parseInt(periodUsers[index - 1].count) : currentCount;
+      const growthRate =
+        previousCount === 0
+          ? 0
+          : ((currentCount - previousCount) / previousCount) * 100;
+
+      // Create a base object with common properties
+      const periodData: any = {
+        userCount: currentCount,
+        growthRate: Math.round(growthRate * 100) / 100, // Round to 2 decimal places
+        previousPeriodCount: previousCount,
+      };
+
+      // Add period-specific label
+      switch (span) {
+        case DurationSpan.WEEKLY:
+          periodData.week = current.period;
+          break;
+        case DurationSpan.MONTHLY:
+          periodData.month = current.period;
+          break;
+        case DurationSpan.DAILY:
+          periodData.date = current.period;
+          break;
+      }
+
+      return periodData;
+    });
+
+    const spanLabel = span.toLowerCase();
+
+    return successHandler(
+      `${spanLabel} user growth rate trend retrieved successfully`,
+      {
+        startDate: format(this.getStartDate(startDate, span), dateFormat),
+        endDate: format(queryEndDate, dateFormat),
+        span: spanLabel,
+        data: growthData,
+      },
+    );
+  }
+
+  // Helper methods for date calculations
+  private getStartDate(date: Date | undefined, span: DurationSpan): Date {
+    if (date) {
+      switch (span) {
+        case DurationSpan.WEEKLY:
+          return startOfWeek(date);
+        case DurationSpan.MONTHLY:
+          return startOfMonth(date);
+        case DurationSpan.DAILY:
+        default:
+          return startOfDay(date);
+      }
+    } else {
+      // Default start dates based on span
+      switch (span) {
+        case DurationSpan.WEEKLY:
+          const nineWeeksAgo = new Date();
+          nineWeeksAgo.setDate(nineWeeksAgo.getDate() - 9 * 7);
+          return startOfWeek(nineWeeksAgo);
+        case DurationSpan.MONTHLY:
+          return startOfMonth(subMonths(new Date(), 11));
+        case DurationSpan.DAILY:
+        default:
+          return startOfDay(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+      }
+    }
+  }
+
+  private getEndDate(date: Date | undefined, span: DurationSpan): Date {
+    if (date) {
+      switch (span) {
+        case DurationSpan.WEEKLY:
+          return endOfWeek(date);
+        case DurationSpan.MONTHLY:
+          return endOfMonth(date);
+        case DurationSpan.DAILY:
+        default:
+          return endOfDay(date);
+      }
+    } else {
+      switch (span) {
+        case DurationSpan.WEEKLY:
+          return endOfWeek(new Date());
+        case DurationSpan.MONTHLY:
+          return endOfMonth(new Date());
+        case DurationSpan.DAILY:
+        default:
+          return endOfDay(new Date());
+      }
+    }
+  }
+
+  private getAdditionalStartDate(
+    date: Date | undefined,
+    span: DurationSpan,
+  ): Date {
+    const startDate = this.getStartDate(date, span);
+
+    switch (span) {
+      case DurationSpan.WEEKLY:
+        // Subtract one week
+        const oneWeekBefore = new Date(startDate);
+        oneWeekBefore.setDate(oneWeekBefore.getDate() - 7);
+        return startOfWeek(oneWeekBefore);
+      case DurationSpan.MONTHLY:
+        // Subtract one month
+        return startOfMonth(subMonths(startDate, 1));
+      case DurationSpan.DAILY:
+      default:
+        // Subtract one day
+        const oneDayBefore = new Date(startDate);
+        oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+        return startOfDay(oneDayBefore);
+    }
   }
 }

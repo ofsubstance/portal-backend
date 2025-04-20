@@ -19,6 +19,7 @@ import { User } from 'src/entities/users.entity';
 import { Role } from 'src/enums/role.enum';
 import { Status } from 'src/enums/status.enum';
 import { GoHighLevelService } from 'src/gohighlevel/gohighlevel.service';
+import { UserSessionsService } from 'src/user-sessions/user-sessions.service';
 import { UsersService } from 'src/users/users.service';
 import { PasswordStrategy } from 'src/utils/password.strategy';
 import { successHandler } from 'src/utils/response.handler';
@@ -39,6 +40,7 @@ export class AuthService {
     private configService: ConfigService,
     private emailService: EmailService,
     private goHighLevelService: GoHighLevelService,
+    private userSessionsService: UserSessionsService,
   ) {}
 
   async getTokens(userId: string, role: string) {
@@ -113,8 +115,6 @@ export class AuthService {
 
     const createdUser = await this.userRepo.save(newUser);
 
-    console.log(createdUser);
-
     // Send user information to GoHighLevel
     try {
       await this.goHighLevelService.createContact(signupUserDto);
@@ -161,7 +161,6 @@ export class AuthService {
         throw new NotFoundException('User with this email does not exist');
       }
 
-      console.log(payload, userInfo);
       await this.userRepo.update(userInfo.id, {
         status: Status.Active,
       });
@@ -181,7 +180,6 @@ export class AuthService {
     failureReason?: string,
     @Req() req?: any,
   ) {
-    console.log(user, successful, loginMethod, failureReason, req);
     const loginEvent = this.loginEventRepo.create({
       user,
       userId: user.id,
@@ -202,8 +200,6 @@ export class AuthService {
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
-
-    console.log(userInfo);
 
     if (userInfo.status === 'inactive') {
       await this.recordLoginEvent(
@@ -234,8 +230,6 @@ export class AuthService {
       userInfo.password,
     );
 
-    console.log(isPasswordValid);
-
     if (!isPasswordValid) {
       await this.recordLoginEvent(
         userInfo,
@@ -254,6 +248,12 @@ export class AuthService {
     // Record successful login event
     await this.recordLoginEvent(userInfo, true, 'credentials', null, req);
 
+    // Create a new user session
+    const userSession = await this.userSessionsService.createSession(
+      userInfo.id,
+      req,
+    );
+
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
     delete userInfo.password;
@@ -261,6 +261,7 @@ export class AuthService {
     return successHandler('Login successful', {
       ...tokens,
       user: userInfo,
+      sessionId: userSession.sessionId,
     });
   }
 
@@ -319,6 +320,12 @@ export class AuthService {
     // Record successful login event
     await this.recordLoginEvent(userInfo, true, 'google', null, req);
 
+    // Create a new user session
+    const userSession = await this.userSessionsService.createSession(
+      userInfo.id,
+      req,
+    );
+
     const tokens = await this.getTokens(userInfo.id, userInfo.role);
 
     delete userInfo.password;
@@ -326,6 +333,7 @@ export class AuthService {
     return successHandler('Login successful', {
       ...tokens,
       user: userInfo,
+      sessionId: userSession.sessionId,
     });
   }
 
@@ -350,7 +358,6 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    console.log(token, newPassword);
     let decoded: any;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);

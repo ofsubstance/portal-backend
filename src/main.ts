@@ -27,6 +27,9 @@ async function bootstrap() {
       'Content-Type',
       'Accept',
       'Authorization',
+      'X-Guest-Session-ID',
+      'x-user-id',
+      'x-session-id',
     ],
     credentials: true, // Allow credentials (cookies, HTTP authentication)
   });

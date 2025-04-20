@@ -12,17 +12,20 @@ export class Feedback extends BaseEntity {
   user: User;
 
   @Column({ nullable: true })
-  rating: number;
+  engagementLevel: number;
 
   @Column({ nullable: true })
-  platform_feedback: string;
+  subjectMatterUsefulness: number;
 
   @Column({ nullable: true })
-  improvements: string;
+  outcomeImprovement: number;
 
   @Column({ nullable: true })
-  video_comment: string;
+  continueUsageLikelihood: number;
 
-  @Column({ default: false })
-  approved: boolean;
+  @Column({ nullable: true })
+  recommendLikelihood: number;
+
+  @Column({ type: 'text', nullable: true })
+  openEndedFeedback: string;
 }

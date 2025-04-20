@@ -2,11 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString } from 'class-validator';
 
 export class CredLoginDto {
-  @ApiProperty({ example: 'admin@gmail.com' })
+  @ApiProperty({ example: 'tausifahmed4802@gmail.com' })
   @IsEmail()
   readonly email: string;
 
-  @ApiProperty({ example: '123456' })
+  @ApiProperty({ example: 'blue1998' })
   @IsString()
   readonly password: string;
 }

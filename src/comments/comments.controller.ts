@@ -30,6 +30,7 @@ export class CommentsController {
     return this.commentsService.findAllComments();
   }
 
+  @Public()
   @Get('video/:videoId')
   findCommentsByVideo(@Param('videoId') videoId: string, @Req() req) {
     return this.commentsService.findCommentsByVideo(videoId, req.user.id);

@@ -251,8 +251,6 @@ export class SharelinksService {
         },
       });
 
-      console.log(trackLinkEngagementDto);
-
       // Create engagement record
       const engagement = this.engagementRepo.create({
         shareableLink: shareLink,

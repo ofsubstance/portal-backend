@@ -9,18 +9,20 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
-import configuration from './config/configuration';
 import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
 import { ExceptionFilterModule } from './exception-filters/exception-filter.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { GoHighLevelModule } from './gohighlevel/gohighlevel.module';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { MetricsModule } from './metrics/metrics.module';
 import { SharelinksModule } from './sharelinks/sharelinks.module';
+import { UserSessionsModule } from './user-sessions/user-sessions.module';
 import { UsersModule } from './users/users.module';
 import { VideoModule } from './video/video.module';
+import { WatchSessionsModule } from './watch-sessions/watch-sessions.module';
 
 @Module({
   imports: [
@@ -41,13 +43,6 @@ import { VideoModule } from './video/video.module';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        '.env',
-        '.env.development',
-        '.env.production',
-        '.env.local',
-      ],
-      load: [configuration],
     }),
     JwtModule.register({
       secret: process.env.ACCESS_TOKEN_SECRET,
@@ -64,6 +59,9 @@ import { VideoModule } from './video/video.module';
     CommentsModule,
     MetricsModule,
     GoHighLevelModule,
+    UserSessionsModule,
+    FeedbackModule,
+    WatchSessionsModule,
   ],
   controllers: [AppController],
   providers: [

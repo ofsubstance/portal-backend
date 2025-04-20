@@ -42,13 +42,10 @@ export class CommentsService {
   }
 
   async findAllComments() {
-    
-
-      const comments = await this.commentRepo.find({
-        relations: ['user', 'video'],
-      });
-      return successHandler('All comments retrieved', comments);
-
+    const comments = await this.commentRepo.find({
+      relations: ['user', 'video'],
+    });
+    return successHandler('All comments retrieved', comments);
   }
 
   async findCommentsByVideo(videoId: string, userId: string) {
@@ -98,7 +95,6 @@ export class CommentsService {
     // Check if user is admin
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return errorhandler(404, 'User not found');
-    console.log(user);
     if (user.role !== Role.Admin) return errorhandler(403, 'Unauthorized');
 
     // Find the comment
