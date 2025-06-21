@@ -37,13 +37,16 @@
     "cookie-parser": "^1.4.6",
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nest-winston": "^1.10.2",
     "nodemailer": "^6.9.16",
     "passport-jwt": "^4.0.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.20",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

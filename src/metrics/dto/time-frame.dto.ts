@@ -5,7 +5,7 @@ import { DurationSpan } from '../enums/duration-span.enum';
 export class TimeFrameDto {
   @ApiProperty({
     description: 'Start date of the time frame',
-    example: '2023-01-01',
+    example: '2025-03-01',
     required: false,
   })
   @IsDateString()
@@ -14,7 +14,7 @@ export class TimeFrameDto {
 
   @ApiProperty({
     description: 'End date of the time frame',
-    example: '2023-12-31',
+    example: '2025-04-31',
     required: false,
   })
   @IsDateString()

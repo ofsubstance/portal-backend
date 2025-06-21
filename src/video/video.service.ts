@@ -74,7 +74,6 @@ export class VideoService {
   async updateVideo(id: string, attributes: Partial<Video>) {
     const video = await this.videoRepo.findOneBy({ id: id });
     if (!video) return errorhandler(404, 'Video not found');
-    console.log(video, attributes);
     Object.assign(video, attributes);
     const updatedVideo = await this.videoRepo.save(video);
     return successHandler('Video updated successfully', updatedVideo);

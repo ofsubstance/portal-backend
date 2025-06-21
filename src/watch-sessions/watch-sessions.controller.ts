@@ -30,7 +30,6 @@ export class WatchSessionsController {
   async createWatchSession(
     @Body() createWatchSessionDto: CreateWatchSessionDto,
   ): Promise<WatchSession> {
-    console.log(createWatchSessionDto);
     return this.watchSessionsService.createWatchSession(createWatchSessionDto);
   }
 
@@ -46,7 +45,6 @@ export class WatchSessionsController {
     @Param('id') id: string,
     @Body() updateWatchSessionDto: UpdateWatchSessionDto,
   ): Promise<WatchSession> {
-    console.log(updateWatchSessionDto);
     return this.watchSessionsService.updateWatchSession(
       id,
       updateWatchSessionDto,

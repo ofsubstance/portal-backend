@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Post,
   Put,
@@ -32,8 +33,11 @@ export class CommentsController {
 
   @Public()
   @Get('video/:videoId')
-  findCommentsByVideo(@Param('videoId') videoId: string, @Req() req) {
-    return this.commentsService.findCommentsByVideo(videoId, req.user.id);
+  findCommentsByVideo(
+    @Param('videoId') videoId: string,
+    @Headers('x-user-id') userId: string,
+  ) {
+    return this.commentsService.findCommentsByVideo(videoId, userId);
   }
 
   @Public()

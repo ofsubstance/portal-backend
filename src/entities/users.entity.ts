@@ -28,6 +28,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   last_login: Date;
 
+  @Column({ nullable: true })
+  first_content_engagement: Date;
+
   @Column({ default: Role.User })
   role: Role;
 

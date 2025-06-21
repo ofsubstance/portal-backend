@@ -29,6 +29,11 @@ import { SignUpDto } from './dto/signup.dto';
 
 @Injectable()
 export class AuthService {
+  private accessTokenSecret: string;
+  private refreshTokenSecret: string;
+  private accessTokenExpiration: string;
+  private refreshTokenExpiration: string;
+
   constructor(
     private usersService: UsersService,
     @InjectRepository(User) private userRepo: Repository<User>,
@@ -41,32 +46,40 @@ export class AuthService {
     private emailService: EmailService,
     private goHighLevelService: GoHighLevelService,
     private userSessionsService: UserSessionsService,
-  ) {}
+  ) {
+    // Cache token configuration values at service initialization
+    this.accessTokenSecret = this.configService.get('ACCESS_TOKEN_SECRET');
+    this.refreshTokenSecret = this.configService.get('REFRESH_TOKEN_SECRET');
+    this.accessTokenExpiration = this.configService.get(
+      'ACCESS_TOKEN_EXPIRATION_TIME',
+    );
+    this.refreshTokenExpiration = this.configService.get(
+      'REFRESH_TOKEN_EXPIRATION_TIME',
+    );
+  }
 
   async getTokens(userId: string, role: string) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, role },
         {
-          secret: this.configService.get('ACCESS_TOKEN_SECRET'),
-          expiresIn: this.configService.get('ACCESS_TOKEN_EXPIRATION_TIME'),
+          secret: this.accessTokenSecret,
+          expiresIn: this.accessTokenExpiration,
         },
       ),
       this.jwtService.signAsync(
         { sub: userId, role },
         {
-          secret: this.configService.get('REFRESH_TOKEN_SECRET'),
-          expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRATION_TIME'),
+          secret: this.refreshTokenSecret,
+          expiresIn: this.refreshTokenExpiration,
         },
       ),
     ]);
 
-    const tokens = {
+    return {
       accessToken,
       refreshToken,
     };
-
-    return tokens;
   }
 
   generateEmailToken(email: string): string {
@@ -119,7 +132,6 @@ export class AuthService {
     try {
       await this.goHighLevelService.createContact(signupUserDto);
     } catch (error) {
-      console.error('Error creating contact in GoHighLevel:', error);
       // We don't want to fail the signup process if GHL integration fails
     }
 
@@ -202,24 +214,28 @@ export class AuthService {
     }
 
     if (userInfo.status === 'inactive') {
-      await this.recordLoginEvent(
+      // Record login event asynchronously without awaiting
+      this.recordLoginEvent(
         userInfo,
         false,
         'credentials',
         'Account Restricted',
         req,
-      );
+      ).catch((err) => console.error('Error recording login event:', err));
+
       throw new BadRequestException('Account Restricted!');
     }
 
     if (userInfo.status === 'unverified') {
-      await this.recordLoginEvent(
+      // Record login event asynchronously without awaiting
+      this.recordLoginEvent(
         userInfo,
         false,
         'credentials',
         'Account not verified',
         req,
-      );
+      ).catch((err) => console.error('Error recording login event:', err));
+
       return successHandler('Account not verified', {
         email: userInfo.email,
       });
@@ -231,30 +247,29 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      await this.recordLoginEvent(
+      // Record login event asynchronously without awaiting
+      this.recordLoginEvent(
         userInfo,
         false,
         'credentials',
         'Invalid password',
         req,
-      );
+      ).catch((err) => console.error('Error recording login event:', err));
+
       throw new BadRequestException('Invalid password');
     }
 
     // Update the user's last_login field to the current date
     userInfo.last_login = new Date();
-    await this.userRepo.save(userInfo);
 
-    // Record successful login event
-    await this.recordLoginEvent(userInfo, true, 'credentials', null, req);
-
-    // Create a new user session
-    const userSession = await this.userSessionsService.createSession(
-      userInfo.id,
-      req,
-    );
-
-    const tokens = await this.getTokens(userInfo.id, userInfo.role);
+    // Run all these operations in parallel
+    const [tokens, userSession, _] = await Promise.all([
+      this.getTokens(userInfo.id, userInfo.role),
+      this.userSessionsService.createSession(userInfo.id, req),
+      this.userRepo.save(userInfo),
+      // Record login event asynchronously as part of the Promise.all
+      this.recordLoginEvent(userInfo, true, 'credentials', null, req),
+    ]);
 
     delete userInfo.password;
 
@@ -315,18 +330,15 @@ export class AuthService {
 
     // Update the user's last_login field to the current date
     userInfo.last_login = new Date();
-    await this.userRepo.save(userInfo);
 
-    // Record successful login event
-    await this.recordLoginEvent(userInfo, true, 'google', null, req);
-
-    // Create a new user session
-    const userSession = await this.userSessionsService.createSession(
-      userInfo.id,
-      req,
-    );
-
-    const tokens = await this.getTokens(userInfo.id, userInfo.role);
+    // Run all operations in parallel
+    const [tokens, userSession, _] = await Promise.all([
+      this.getTokens(userInfo.id, userInfo.role),
+      this.userSessionsService.createSession(userInfo.id, req),
+      this.userRepo.save(userInfo),
+      // Record login event asynchronously as part of the Promise.all
+      this.recordLoginEvent(userInfo, true, 'google', null, req),
+    ]);
 
     delete userInfo.password;
 

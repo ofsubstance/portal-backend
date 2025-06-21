@@ -19,8 +19,19 @@ export class UserSessionsService {
     const sessionId = uuidv4();
     const now = new Date();
 
-    // End any active sessions for this user
-    await this.endActiveSessionsForUser(userId);
+    // Mark previous sessions as inactive in a single query instead of fetching and updating each one
+    await this.userSessionRepository
+      .createQueryBuilder()
+      .update(UserSession)
+      .set({
+        isActive: false,
+        endTime: now,
+      })
+      .where('userId = :userId AND isActive = :isActive', {
+        userId,
+        isActive: true,
+      })
+      .execute();
 
     this.logger.log(
       `Creating new session ${sessionId} for user ${userId} at ${now.toISOString()}`,
@@ -169,22 +180,24 @@ export class UserSessionsService {
   async endActiveSessionsForUser(userId: string): Promise<void> {
     this.logger.log(`Ending all active sessions for user ${userId}`);
 
-    const activeSessions = await this.userSessionRepository.find({
-      where: { userId, isActive: true },
-    });
-
     const now = new Date();
-    for (const session of activeSessions) {
-      session.isActive = false;
-      session.endTime = now;
-      await this.userSessionRepository.save(session);
-      this.logger.log(
-        `Session ${session.sessionId} ended at ${now.toISOString()}`,
-      );
-    }
+
+    // Use a single query to update all active sessions instead of one by one
+    const result = await this.userSessionRepository
+      .createQueryBuilder()
+      .update(UserSession)
+      .set({
+        isActive: false,
+        endTime: now,
+      })
+      .where('userId = :userId AND isActive = :isActive', {
+        userId,
+        isActive: true,
+      })
+      .execute();
 
     this.logger.log(
-      `Ended ${activeSessions.length} active sessions for user ${userId}`,
+      `Ended ${result.affected || 0} active sessions for user ${userId}`,
     );
   }
 

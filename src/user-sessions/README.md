@@ -121,7 +121,6 @@ const startHeartbeat = () => {
       if (response.data.status === 'renewed' && response.data.sessionId) {
         // Update to the new session ID
         localStorage.setItem('sessionId', response.data.sessionId);
-        console.log('Session renewed with new ID:', response.data.sessionId);
       } else if (response.data.needsNewSession) {
         // Session expired, redirect to login
         localStorage.removeItem('sessionId');
@@ -158,7 +157,6 @@ const setContentEngaged = async (engaged = true) => {
 
   try {
     await api.patch(`/user-sessions/${sessionId}/content-engaged`, { engaged });
-    console.log(`Content engagement status set to ${engaged}`);
   } catch (error) {
     console.error('Failed to update content engagement status', error);
   }

@@ -12,7 +12,6 @@ export const CloudinaryUpload = async (
   });
 
   try {
-    console.log(file);
     const base64String = file.buffer.toString('base64');
 
     const imageUpload = await cloudinary.uploader.upload(
@@ -24,9 +23,8 @@ export const CloudinaryUpload = async (
       },
     );
 
-    console.log(imageUpload);
     return imageUpload;
   } catch (error) {
-    console.log(error);
+    throw new Error(error);
   }
 };

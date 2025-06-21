@@ -8,6 +8,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/decorators/auth.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
@@ -35,5 +36,12 @@ export class UsersController {
   @Delete('/:id')
   deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
+  }
+
+  @Public()
+  @Patch('/:id/content-engagement')
+  async updateFirstContentEngagement(@Param('id') id: string) {
+    await this.usersService.updateFirstContentEngagement(id);
+    return { success: true };
   }
 }

@@ -16,8 +16,23 @@ export class UsersService {
   }
 
   async findUserByEmail(email: string) {
-    const user = await this.userRepo.findBy({ email: email });
-    return user;
+    const user = await this.userRepo.findOne({
+      where: { email: email },
+      select: [
+        'id',
+        'email',
+        'password',
+        'role',
+        'status',
+        'firstname',
+        'lastname',
+        'last_login',
+        'first_content_engagement',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+    return user ? [user] : [];
   }
 
   async findAllUsers() {
@@ -46,5 +61,15 @@ export class UsersService {
     if (!user) errorhandler(404, 'User not found');
     await this.userRepo.remove(user);
     return successHandler('User deleted successfully', null);
+  }
+
+  async updateFirstContentEngagement(userId: string): Promise<void> {
+    // Only update if first_content_engagement is not set yet
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set({ first_content_engagement: () => 'CURRENT_TIMESTAMP' })
+      .where('id = :userId AND first_content_engagement IS NULL', { userId })
+      .execute();
   }
 }
