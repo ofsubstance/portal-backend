@@ -12,9 +12,6 @@ export class UserSession extends BaseEntity {
   userId: string;
 
   @Column()
-  sessionId: string;
-
-  @Column()
   startTime: Date;
 
   @Column({ nullable: true })

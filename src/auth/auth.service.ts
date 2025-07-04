@@ -276,7 +276,7 @@ export class AuthService {
     return successHandler('Login successful', {
       ...tokens,
       user: userInfo,
-      sessionId: userSession.sessionId,
+      sessionId: userSession.id,
     });
   }
 
@@ -345,7 +345,7 @@ export class AuthService {
     return successHandler('Login successful', {
       ...tokens,
       user: userInfo,
-      sessionId: userSession.sessionId,
+      sessionId: userSession.id,
     });
   }
 

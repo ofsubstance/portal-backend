@@ -37,10 +37,6 @@ export class EngagementMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting session metrics from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     const metrics = await this.engagementMetricsService.getSessionMetrics(
       startDate,
       endDate,
@@ -62,10 +58,6 @@ export class EngagementMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting ${span} session metrics from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     const timespanMetrics =
       await this.engagementMetricsService.getSessionsByTimespan(
@@ -89,10 +81,6 @@ export class EngagementMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting daily session metrics from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     const dailyMetrics = await this.engagementMetricsService.getDailySessions(
       startDate,
@@ -136,10 +124,6 @@ export class EngagementMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting content watch rates from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.engagementMetricsService.getContentWatchRates(
       startDate,
       endDate,
@@ -157,10 +141,6 @@ export class EngagementMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting ${span} content watch rates from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.engagementMetricsService.getContentWatchRatesByTimespan(
       startDate,
       endDate,
@@ -172,7 +152,6 @@ export class EngagementMetricsController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   async getInterestCoOccurrenceMatrix() {
-    this.logger.log('Getting interest co-occurrence matrix');
     return this.engagementMetricsService.getInterestCoOccurrenceMatrix();
   }
 
@@ -180,7 +159,6 @@ export class EngagementMetricsController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   async getInterestOverlapForSankey() {
-    this.logger.log('Getting interest overlap data for Sankey diagram');
     return this.engagementMetricsService.getInterestOverlapForSankey();
   }
 }

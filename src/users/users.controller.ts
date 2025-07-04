@@ -1,13 +1,13 @@
 import {
-  Body,
-  Catch,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
+    Body,
+    Catch,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/decorators/auth.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
@@ -26,6 +26,16 @@ export class UsersController {
   @Get()
   findAllUsers() {
     return this.usersService.findAllUsers();
+  }
+
+  @Get('/:id/engagement')
+  @ApiOperation({ summary: 'Get user engagement data' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns user engagement metrics including watch sessions, shareable links, and content engagement statistics' 
+  })
+  getUserEngagement(@Param('id') id: string) {
+    return this.usersService.getUserEngagement(id);
   }
 
   @Patch('/:id')

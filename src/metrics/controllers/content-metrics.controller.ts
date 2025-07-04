@@ -1,18 +1,18 @@
 import {
-  Controller,
-  Get,
-  Logger,
-  Param,
-  Query,
-  UseGuards,
+    Controller,
+    Get,
+    Logger,
+    Param,
+    Query,
+    UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
 import {
-  ContentMetricsService,
-  TimePeriod,
+    ContentMetricsService,
+    TimePeriod,
 } from '../services/content-metrics.service';
 
 @ApiTags('Content Metrics')
@@ -43,10 +43,6 @@ export class ContentMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting ${period} views for video ${videoId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.contentMetricsService.getVideoViews(
       videoId,
       startDate,
@@ -74,10 +70,6 @@ export class ContentMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting ${period} average percentage watched for video ${videoId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     return this.contentMetricsService.getAveragePercentageWatched(
       videoId,
@@ -107,10 +99,6 @@ export class ContentMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting ${period} share count for video ${videoId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.contentMetricsService.getShareCount(
       videoId,
       startDate,
@@ -138,10 +126,6 @@ export class ContentMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting ${period} completion and drop-off rates for video ${videoId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     return this.contentMetricsService.getCompletionAndDropOffRates(
       videoId,

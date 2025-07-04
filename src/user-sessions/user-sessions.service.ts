@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { UserSession } from '../entities/user_sessions.entity';
 
 @Injectable()
@@ -16,7 +15,6 @@ export class UserSessionsService {
   ) {}
 
   async createSession(userId: string, req: Request): Promise<UserSession> {
-    const sessionId = uuidv4();
     const now = new Date();
 
     // Mark previous sessions as inactive in a single query instead of fetching and updating each one
@@ -33,13 +31,8 @@ export class UserSessionsService {
       })
       .execute();
 
-    this.logger.log(
-      `Creating new session ${sessionId} for user ${userId} at ${now.toISOString()}`,
-    );
-
     const session = this.userSessionRepository.create({
       userId,
-      sessionId,
       startTime: now,
       lastActiveTime: now,
       ipAddress: req.ip,
@@ -49,7 +42,8 @@ export class UserSessionsService {
     });
 
     const savedSession = await this.userSessionRepository.save(session);
-    this.logger.log(`Session ${sessionId} created successfully`);
+    
+    this.logger.log(`Session ${savedSession.id} created for user ${userId}`);
 
     return savedSession;
   }
@@ -63,7 +57,7 @@ export class UserSessionsService {
     status: 'active' | 'expired' | 'renewed';
   }> {
     const session = await this.userSessionRepository.findOne({
-      where: { sessionId, isActive: true },
+      where: { id: sessionId, isActive: true },
     });
 
     if (!session) {
@@ -89,21 +83,12 @@ export class UserSessionsService {
       (now.getTime() - lastActive.getTime()) / (1000 * 60),
     );
 
-    this.logger.log(
-      `Session ${sessionId} last active ${diffInMinutes} minutes ago`,
-    );
-
     // If last activity was more than 1 hour ago, mark session as inactive
     if (diffInMinutes >= 60) {
-      this.logger.log(
-        `Session ${sessionId} expired (inactive for ${diffInMinutes} minutes). Ending session.`,
-      );
+      this.logger.log(`Session ${sessionId} expired after ${diffInMinutes} minutes of inactivity`);
 
       // Calculate end time as lastActiveTime + 5 minutes for more accurate session duration
       const endTime = new Date(lastActive.getTime() + 5 * 60 * 1000);
-      this.logger.log(
-        `Setting session end time to lastActiveTime + 5 minutes: ${endTime.toISOString()}`,
-      );
 
       session.isActive = false;
       session.endTime = endTime;
@@ -113,7 +98,6 @@ export class UserSessionsService {
       const userId = this.extractUserIdFromRequest(req);
 
       if (userId) {
-        this.logger.log(`Creating new session for user ${userId} after expiry`);
         const newSession = await this.createSession(userId, req);
         return { session: null, newSession, status: 'renewed' };
       }
@@ -122,9 +106,6 @@ export class UserSessionsService {
     }
 
     // Update last active time
-    this.logger.log(
-      `Updating last active time for session ${sessionId} to ${now.toISOString()}`,
-    );
     session.lastActiveTime = now;
     const updatedSession = await this.userSessionRepository.save(session);
     return { session: updatedSession, status: 'active' };
@@ -157,10 +138,8 @@ export class UserSessionsService {
   }
 
   async endSession(sessionId: string): Promise<void> {
-    this.logger.log(`Ending session ${sessionId}`);
-
     const session = await this.userSessionRepository.findOne({
-      where: { sessionId, isActive: true },
+      where: { id: sessionId, isActive: true },
     });
 
     if (!session) {
@@ -172,14 +151,10 @@ export class UserSessionsService {
     session.endTime = new Date();
     await this.userSessionRepository.save(session);
 
-    this.logger.log(
-      `Session ${sessionId} ended at ${session.endTime.toISOString()}`,
-    );
+    this.logger.log(`Session ${sessionId} ended`);
   }
 
   async endActiveSessionsForUser(userId: string): Promise<void> {
-    this.logger.log(`Ending all active sessions for user ${userId}`);
-
     const now = new Date();
 
     // Use a single query to update all active sessions instead of one by one
@@ -196,14 +171,12 @@ export class UserSessionsService {
       })
       .execute();
 
-    this.logger.log(
-      `Ended ${result.affected || 0} active sessions for user ${userId}`,
-    );
+    this.logger.log(`Ended ${result.affected || 0} sessions for user ${userId}`);
   }
 
   async getActiveSession(sessionId: string): Promise<UserSession> {
     const session = await this.userSessionRepository.findOne({
-      where: { sessionId, isActive: true },
+      where: { id: sessionId, isActive: true },
     });
 
     if (!session) {
@@ -215,8 +188,6 @@ export class UserSessionsService {
   }
 
   async getUserActiveSessions(userId: string): Promise<UserSession[]> {
-    this.logger.log(`Getting active sessions for user ${userId}`);
-
     const sessions = await this.userSessionRepository.find({
       where: { userId, isActive: true },
       order: { lastActiveTime: 'DESC' },
@@ -226,8 +197,6 @@ export class UserSessionsService {
   }
 
   async getAllActiveSessions(): Promise<UserSession[]> {
-    this.logger.log('Getting all active sessions');
-
     const sessions = await this.userSessionRepository.find({
       where: { isActive: true },
       order: { lastActiveTime: 'DESC' },
@@ -255,10 +224,6 @@ export class UserSessionsService {
     sessionId: string,
     engaged: boolean,
   ): Promise<UserSession> {
-    this.logger.log(
-      `Updating content engaged status for session ${sessionId} to ${engaged}`,
-    );
-
     const session = await this.getActiveSession(sessionId);
     session.contentEngaged = engaged;
 

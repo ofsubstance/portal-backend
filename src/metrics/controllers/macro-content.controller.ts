@@ -25,10 +25,6 @@ export class MacroContentMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting video completion rates from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.macroContentMetricsService.getVideoCompletionRates(
       startDate,
       endDate,
@@ -44,10 +40,6 @@ export class MacroContentMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting most viewed videos from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     return this.macroContentMetricsService.getMostViewedVideos(
       startDate,
@@ -65,10 +57,6 @@ export class MacroContentMetricsController {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    this.logger.log(
-      `Getting most shared videos from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
-
     return this.macroContentMetricsService.getMostSharedVideos(
       startDate,
       endDate,
@@ -84,10 +72,6 @@ export class MacroContentMetricsController {
   ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
-    this.logger.log(
-      `Getting link clickthrough rates from ${startDate.toISOString()} to ${endDate.toISOString()}`,
-    );
 
     return this.macroContentMetricsService.getLinkClickthroughRates(
       startDate,
