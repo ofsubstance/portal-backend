@@ -56,7 +56,7 @@ export class User extends BaseEntity {
   @JoinColumn()
   profile: Profile;
 
-  @OneToMany(() => Feedback, (feedback) => feedback.video, { nullable: true })
+  @OneToMany(() => Feedback, (feedback) => feedback.user, { nullable: true })
   feedbacks: Feedback[];
 
   @OneToMany(() => Comment, (comment) => comment.user, { nullable: true })

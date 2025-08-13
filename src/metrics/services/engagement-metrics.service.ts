@@ -212,19 +212,48 @@ export class EngagementMetricsService {
       };
     }
 
-    // Calculate session durations in minutes
-    const sessionDurations = sessions.map((session) => {
-      const start = new Date(session.startTime).getTime();
-      const end = new Date(session.endTime).getTime();
-      return (end - start) / (1000 * 60); // Convert ms to minutes
-    });
+    // Calculate valid session durations in minutes
+    const validSessionDurations = sessions
+      .map((session) => {
+        // Ensure both timestamps exist
+        if (!session.startTime || !session.endTime) {
+          return null;
+        }
 
-    // Calculate total and average duration
-    const totalDurationMinutes = sessionDurations.reduce(
+        const start = new Date(session.startTime).getTime();
+        const end = new Date(session.endTime).getTime();
+
+        // Calculate duration in minutes
+        const durationMinutes = (end - start) / (1000 * 60);
+
+        // Validate duration (must be positive and less than 24 hours)
+        if (durationMinutes <= 0 || durationMinutes > 24 * 60) {
+          return null;
+        }
+
+        return durationMinutes;
+      })
+      .filter((duration): duration is number => duration !== null);
+
+    // Get count of valid sessions
+    const validSessionCount = validSessionDurations.length;
+
+    if (validSessionCount === 0) {
+      return {
+        totalSessions: sessions.length,
+        averageDurationMinutes: 0,
+        totalDurationMinutes: 0,
+        engagedSessions: 0,
+        engagementRate: 0,
+      };
+    }
+
+    // Calculate total and average duration from valid sessions only
+    const totalDurationMinutes = validSessionDurations.reduce(
       (sum, duration) => sum + duration,
       0,
     );
-    const averageDurationMinutes = totalDurationMinutes / sessions.length;
+    const averageDurationMinutes = totalDurationMinutes / validSessionCount;
 
     // Calculate engagement metrics
     const engagedSessions = sessions.filter(
@@ -234,10 +263,11 @@ export class EngagementMetricsService {
 
     return {
       totalSessions: sessions.length,
-      averageDurationMinutes,
-      totalDurationMinutes,
+      validSessions: validSessionCount,
+      averageDurationMinutes: Math.round(averageDurationMinutes * 100) / 100,
+      totalDurationMinutes: Math.round(totalDurationMinutes * 100) / 100,
       engagedSessions,
-      engagementRate,
+      engagementRate: Math.round(engagementRate * 100) / 100,
       startDate,
       endDate,
     };
@@ -263,6 +293,7 @@ export class EngagementMetricsService {
     const periodRange = getPeriodsInRange(queryStartDate, queryEndDate, span);
     const periodMap = createPeriodMap(periodRange, dateFormat);
     const engagedSessionsMap = createPeriodMap(periodRange, dateFormat);
+    const durationMap = createPeriodMap(periodRange, dateFormat);
 
     const sessions = await this.userSessionRepo.find({
       where: {
@@ -275,16 +306,32 @@ export class EngagementMetricsService {
     sessions.forEach((session) => {
       const periodKey = format(new Date(session.startTime), dateFormat);
       if (periodMap.has(periodKey)) {
-        periodMap.set(periodKey, periodMap.get(periodKey) + 1);
-        if (session.contentEngaged) {
-          engagedSessionsMap.set(
-            periodKey,
-            engagedSessionsMap.get(periodKey) + 1,
-          );
+        // Calculate duration in minutes with validation
+        if (session.startTime && session.endTime) {
+          const start = new Date(session.startTime).getTime();
+          const end = new Date(session.endTime).getTime();
+          const durationMinutes = (end - start) / (1000 * 60);
+
+          // Only count valid durations (positive and less than 24 hours)
+          if (durationMinutes > 0 && durationMinutes <= 24 * 60) {
+            periodMap.set(periodKey, periodMap.get(periodKey) + 1);
+            durationMap.set(
+              periodKey,
+              durationMap.get(periodKey) + durationMinutes,
+            );
+
+            if (session.contentEngaged) {
+              engagedSessionsMap.set(
+                periodKey,
+                engagedSessionsMap.get(periodKey) + 1,
+              );
+            }
+          }
         }
       }
     });
 
+    // Format label based on period
     let periodLabel = 'date';
     switch (span) {
       case DurationSpan.WEEKLY:
@@ -295,16 +342,35 @@ export class EngagementMetricsService {
         break;
     }
 
-    const data = Array.from(periodMap.entries()).map(([period, sessions]) => ({
-      period,
-      [periodLabel]: period,
-      sessions,
-      engagedSessions: engagedSessionsMap.get(period),
-      engagementRate:
-        sessions > 0 ? (engagedSessionsMap.get(period) / sessions) * 100 : 0,
-    }));
+    // Convert maps to array format with calculated metrics
+    const distribution = Array.from(periodMap.entries()).map(
+      ([period, count]) => {
+        const engagedCount = engagedSessionsMap.get(period) || 0;
+        const totalDurationMinutes = durationMap.get(period) || 0;
+        const averageDurationMinutes =
+          count > 0 ? totalDurationMinutes / count : 0;
 
-    return data;
+        return {
+          [periodLabel]: period,
+          sessions: count,
+          engagedSessions: engagedCount,
+          engagementRate:
+            count > 0
+              ? Math.round((engagedCount / count) * 100 * 100) / 100
+              : 0,
+          averageDurationMinutes:
+            Math.round(averageDurationMinutes * 100) / 100,
+          totalDurationMinutes: Math.round(totalDurationMinutes * 100) / 100,
+        };
+      },
+    );
+
+    return successHandler(`${span} session metrics retrieved successfully`, {
+      startDate: startPeriodString,
+      endDate: endPeriodString,
+      span: span.toLowerCase(),
+      data: distribution,
+    });
   }
 
   async getDailySessions(startDate: Date, endDate: Date) {

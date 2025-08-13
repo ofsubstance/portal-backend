@@ -208,3 +208,34 @@ export function createPeriodMap(
   });
   return periodMap;
 }
+
+/**
+ * Convert duration string to minutes
+ * Handles both "HH:mm:ss" and "mm:ss" formats
+ */
+export function durationToMinutes(duration: string): number {
+  const parts = duration.split(':').map(Number);
+  if (parts.length === 3) {
+    // HH:mm:ss format
+    return parts[0] * 60 + parts[1] + parts[2] / 60;
+  } else if (parts.length === 2) {
+    // mm:ss format
+    return parts[0] + parts[1] / 60;
+  }
+  return 0;
+}
+
+/**
+ * Format minutes to duration string in "HH:mm:ss" format
+ */
+export function minutesToDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.floor(minutes % 60);
+  const seconds = Math.round((minutes * 60) % 60);
+
+  return [
+    hours.toString().padStart(2, '0'),
+    remainingMinutes.toString().padStart(2, '0'),
+    seconds.toString().padStart(2, '0'),
+  ].join(':');
+}

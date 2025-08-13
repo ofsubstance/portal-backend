@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
+import { DataExportModule } from './data-export/data-export.module';
 import { EmailService } from './email.service';
 import { EntitiesModule } from './entities/entities.module';
 import { ExceptionFilterModule } from './exception-filters/exception-filter.module';
@@ -62,6 +63,7 @@ import { WatchSessionsModule } from './watch-sessions/watch-sessions.module';
     UserSessionsModule,
     FeedbackModule,
     WatchSessionsModule,
+    DataExportModule,
   ],
   controllers: [AppController],
   providers: [
