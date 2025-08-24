@@ -321,9 +321,17 @@ export class AuthService {
     );
 
     if (!userInfo) {
+      // Split the name into firstname and lastname
+      const nameParts = googleLoginDto.name.split(' ');
+      const firstname = nameParts[0];
+      const lastname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
       const newUser = this.userRepo.create({
-        ...googleLoginDto,
+        email: googleLoginDto.email,
+        firstname,
+        lastname,
         role: Role.User,
+        status: Status.Active, // Google authenticated users are automatically verified
       });
       userInfo = await this.userRepo.save(newUser);
     }

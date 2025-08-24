@@ -30,16 +30,15 @@ import { WatchSessionsModule } from './watch-sessions/watch-sessions.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
+      port: +process.env.DB_PORT,
+      username: process.env.DB_USER,
+      password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
       synchronize: true,
       ssl: {
-        ca: process.env.DB_CA,
-        rejectUnauthorized: true,
+        rejectUnauthorized: false, // for dev
       },
     }),
     ConfigModule.forRoot({

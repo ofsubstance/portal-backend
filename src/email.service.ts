@@ -7,12 +7,12 @@ export class EmailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, // e.g., ""
-      port: parseInt(process.env.EMAIL_PORT, 10) || 587, // Default SMTP port
-      secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // 465 requires secure=true
       auth: {
-        user: process.env.EMAIL_USER, // Sender email address
-        pass: process.env.EMAIL_PASSWORD, // Email password or app password
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
       },
     });
   }
@@ -21,7 +21,7 @@ export class EmailService {
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM,
+      from: process.env.MAIL_FROM,
       to: email,
       subject: 'Verify Your Email Address',
       html: `
@@ -49,14 +49,25 @@ export class EmailService {
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
     const mailOptions = {
-      from: process.env.EMAIL_FROM,
+      from: process.env.MAIL_FROM,
       to: email,
       subject: 'Password Reset Request',
       html: `
-        <p>You requested to reset your password for Of Substance.</p>
-        <p>Click the link below to reset it:</p>
-        <a href="${resetLink}" style="color: #4CAF50;">Reset Password</a>
-        <p>If you didn't request this, you can safely ignore this email.</p>
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+          <h2 style="color: #FF0A0A; text-align: center;">Reset Your Password</h2>
+          <p>Hello,</p>
+          <p>We received a request to reset your password for your <strong>Of Substance</strong> account. To proceed with resetting your password, please click the button below:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${resetLink}" style="background-color: #FF0A0A; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Reset Password</a>
+          </div>
+          <p>If the button above doesn't work, you can also reset your password by copying and pasting the following link into your browser:</p>
+          <p style="word-wrap: break-word;">
+            <a href="${resetLink}" style="color: #FF0A0A;">${resetLink}</a>
+          </p>
+          <p>If you didn't request this password reset, you can safely ignore this email. Your account security has not been compromised.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #777;">This email was sent from <strong>Of Substance</strong>. Please do not reply to this email as it is not monitored.</p>
+        </div>
       `,
     };
 

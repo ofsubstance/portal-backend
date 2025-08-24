@@ -67,7 +67,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  await app.listen(configService.get('PORT'));
+  await app.listen(5000);
 
   const appUrl = await app.getUrl();
 
