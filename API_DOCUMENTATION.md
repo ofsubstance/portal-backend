@@ -1,6 +1,7 @@
 # Substance Backend API Documentation
 
 ## Table of Contents
+
 - [Authentication](#authentication)
 - [Users](#users)
 - [Videos](#videos)
@@ -12,9 +13,11 @@
 - [Content Metrics](#content-metrics)
 
 ## Standard Response Format
+
 All API endpoints follow a standard response format:
 
 ### Success Response
+
 ```json
 {
   "statusCode": 200,
@@ -27,6 +30,7 @@ All API endpoints follow a standard response format:
 ```
 
 ### Error Response
+
 ```json
 {
   "statusCode": 400-500,
@@ -37,14 +41,17 @@ All API endpoints follow a standard response format:
 ```
 
 ## Authentication
+
 Base URL: `/auth`
 
 ### Sign Up
+
 ```http
 POST /auth/signup
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "example@gmail.com",
@@ -66,6 +73,7 @@ POST /auth/signup
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -75,18 +83,20 @@ POST /auth/signup
     "id": "uuid",
     "email": "example@gmail.com",
     "firstname": "John",
-    "lastname": "Doe",
+    "lastname": "Doe"
     // ... other user fields
   }
 }
 ```
 
 ### Login with Credentials
+
 ```http
 POST /auth/login
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "example@gmail.com",
@@ -95,6 +105,7 @@ POST /auth/login
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -104,7 +115,7 @@ POST /auth/login
     "token": "jwt_token",
     "user": {
       "id": "uuid",
-      "email": "example@gmail.com",
+      "email": "example@gmail.com"
       // ... other user fields
     }
   }
@@ -112,11 +123,13 @@ POST /auth/login
 ```
 
 ### Google Login
+
 ```http
 POST /auth/google-login
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "client@gmail.com",
@@ -125,14 +138,17 @@ POST /auth/google-login
 ```
 
 ### Verify Email
+
 ```http
 GET /auth/verify-email?token={token}
 ```
 
 **Query Parameters:**
+
 - `token` (string, required): Email verification token
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -143,11 +159,13 @@ GET /auth/verify-email?token={token}
 ```
 
 ### Resend Verification Email
+
 ```http
 POST /auth/resendVerification
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "example@gmail.com"
@@ -155,11 +173,13 @@ POST /auth/resendVerification
 ```
 
 ### Forgot Password
+
 ```http
 POST /auth/forgot-password
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "example@gmail.com"
@@ -167,14 +187,17 @@ POST /auth/forgot-password
 ```
 
 ## Users
+
 Base URL: `/users`
 
 ### Get User by ID
+
 ```http
 GET /users/{id}
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -200,11 +223,13 @@ GET /users/{id}
 ```
 
 ### Get All Users
+
 ```http
 GET /users
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -240,6 +265,7 @@ GET /users
 ```
 
 **Response Fields:**
+
 - User fields:
   - `id`: Unique identifier for the user
   - `firstname`: User's first name
@@ -264,11 +290,13 @@ GET /users
   - `interests`: Array of user interests
 
 ### Update User
+
 ```http
 PATCH /users/{id}
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "John Doe",
@@ -287,21 +315,25 @@ PATCH /users/{id}
 ```
 
 ### Delete User
+
 ```http
 DELETE /users/{id}
 ```
 
 ### Update First Content Engagement
+
 ```http
 PATCH /users/{id}/content-engagement
 ```
 
 ### Get User Engagement Data
+
 ```http
 GET /users/{id}/engagement
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -370,6 +402,7 @@ GET /users/{id}/engagement
 ```
 
 **Response Fields:**
+
 - `sessionStats`:
   - `totalSessions`: Total number of user sessions
   - `activeSessions`: Number of currently active sessions
@@ -411,14 +444,17 @@ GET /users/{id}/engagement
     - `uniqueVideosWatched`: Number of unique videos watched
 
 ## Videos
+
 Base URL: `/video`
 
 ### Get All Videos
+
 ```http
 GET /video
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -448,21 +484,25 @@ GET /video
 ```
 
 ### Get Video by ID
+
 ```http
 GET /video/{id}
 ```
 
 ### Get Videos by Genre
+
 ```http
 GET /video/genre/{genre}
 ```
 
 ### Create/Update Video
+
 ```http
 POST /video
 ```
 
 **Request Body (multipart/form-data):**
+
 ```json
 {
   "video_url": "string",
@@ -482,14 +522,17 @@ POST /video
 ```
 
 ## Watch Sessions
+
 Base URL: `/watch-sessions`
 
 ### Create Watch Session
+
 ```http
 POST /watch-sessions
 ```
 
 **Request Body:**
+
 ```json
 {
   "userSessionId": "string",
@@ -505,6 +548,7 @@ POST /watch-sessions
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -525,11 +569,13 @@ POST /watch-sessions
 ```
 
 ### Update Watch Session
+
 ```http
 PATCH /watch-sessions/{id}
 ```
 
 **Request Body:**
+
 ```json
 {
   "userSessionId": "string",
@@ -545,14 +591,17 @@ PATCH /watch-sessions/{id}
 ```
 
 ## Comments
+
 Base URL: `/comments`
 
 ### Create Comment
+
 ```http
 POST /comments
 ```
 
 **Request Body:**
+
 ```json
 {
   "text": "This video was very insightful!",
@@ -561,11 +610,13 @@ POST /comments
 ```
 
 ### Update Comment Status
+
 ```http
 PATCH /comments/{id}/status
 ```
 
 **Request Body:**
+
 ```json
 {
   "status": "Approved"
@@ -573,14 +624,17 @@ PATCH /comments/{id}/status
 ```
 
 ## Feedback
+
 Base URL: `/feedback`
 
 ### Create Feedback
+
 ```http
 POST /feedback
 ```
 
 **Request Body:**
+
 ```json
 {
   "videoId": "123e4567-e89b-12d3-a456-426614174000",
@@ -594,6 +648,7 @@ POST /feedback
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -616,24 +671,29 @@ POST /feedback
 ```
 
 ### Get Feedback by ID
+
 ```http
 GET /feedback/{id}
 ```
 
 ## Shareable Links
+
 Base URL: `/sharelinks`
 
 ### Get All Share Links
+
 ```http
 GET /sharelinks
 ```
 
 ### Create Share Link
+
 ```http
 POST /sharelinks
 ```
 
 **Request Body:**
+
 ```json
 {
   "validity_days": 30,
@@ -642,26 +702,31 @@ POST /sharelinks
 ```
 
 ### Get Share Link by Unique Link
+
 ```http
 GET /sharelinks/unique/{uniqueLink}
 ```
 
 ### Get Share Links by User
+
 ```http
 GET /sharelinks/user/{userId}
 ```
 
 ### Get Share Link by ID
+
 ```http
 GET /sharelinks/{id}
 ```
 
 ### Track Link Engagement
+
 ```http
 POST /sharelinks/{id}/track
 ```
 
 **Request Body:**
+
 ```json
 {
   "ip_address": "string",
@@ -671,19 +736,23 @@ POST /sharelinks/{id}/track
 ```
 
 ## Analytics
+
 Base URL: `/analytics`
 
 Various analytics endpoints are available for admin users to track platform metrics.
 
 ## Content Metrics
+
 Base URL: `/metrics/content`
 
 ### Get Content Metrics
+
 ```http
 GET /metrics/content
 ```
 
 **Query Parameters:**
+
 ```json
 {
   "startDate": "2025-03-01",
@@ -693,6 +762,7 @@ GET /metrics/content
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -704,12 +774,395 @@ GET /metrics/content
     "metrics": {
       "totalViews": 1000,
       "averageWatchTime": 1500,
-      "completionRate": 75.5,
+      "completionRate": 75.5
       // ... other metrics
     }
   }
 }
 ```
+
+## Macro Content Metrics Endpoints
+
+### Base URL: `/metrics/macro-content`
+
+#### 1. Get Video Completion Rates
+
+**Endpoint:** `GET /metrics/macro-content/completion-rates`
+
+**Description:** Retrieves video completion rates with detailed analytics including average completion percentage, total sessions, and time watched.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format (e.g., "2025-01-01")
+- `endDate` (required): End date in ISO string format (e.g., "2025-01-31")
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Video completion rates retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "Video Title",
+        "genre": "Business",
+        "duration": "15:30",
+        "averageCompletion": 85.5,
+        "totalSessions": 150,
+        "totalTimeWatched": 1245.75
+      }
+    ]
+  }
+}
+```
+
+#### 2. Get Most Viewed Videos
+
+**Endpoint:** `GET /metrics/macro-content/most-viewed`
+
+**Description:** Retrieves the most viewed videos with view counts, unique viewers, and completion rates.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Most viewed videos retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "Popular Video",
+        "genre": "Leadership",
+        "duration": "20:45",
+        "tags": ["leadership", "management"],
+        "viewCount": 500,
+        "uniqueViewers": 350,
+        "averageCompletion": 78.2
+      }
+    ]
+  }
+}
+```
+
+#### 3. Get Most Shared Videos
+
+**Endpoint:** `GET /metrics/macro-content/most-shared`
+
+**Description:** Retrieves videos with the highest share counts and link performance.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Most shared videos retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "Viral Video",
+        "genre": "Innovation",
+        "duration": "12:30",
+        "shareCount": 25,
+        "totalViews": 150,
+        "averageViewsPerShare": 6.0
+      }
+    ]
+  }
+}
+```
+
+#### 4. Get Link Clickthrough Rates
+
+**Endpoint:** `GET /metrics/macro-content/link-clickthrough`
+
+**Description:** Analyzes clickthrough rates for shared video links.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Link clickthrough rates retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "High CTR Video",
+        "genre": "Strategy",
+        "totalLinks": 10,
+        "totalViews": 200,
+        "uniqueEngagements": 45,
+        "clickthroughRate": 22.5
+      }
+    ]
+  }
+}
+```
+
+#### 5. Get Content Engagement Scores
+
+**Endpoint:** `GET /metrics/macro-content/engagement-scores`
+
+**Description:** Comprehensive engagement scoring based on completion rates, comments, feedback, shares, and ratings.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Content engagement scores retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "High Engagement Video",
+        "genre": "Leadership",
+        "duration": "18:20",
+        "tags": ["leadership", "team"],
+        "engagementScore": 92.5,
+        "metrics": {
+          "totalViews": 300,
+          "uniqueViewers": 250,
+          "avgCompletion": 85.0,
+          "commentCount": 15,
+          "feedbackCount": 45,
+          "shareCount": 12,
+          "avgEngagementLevel": 4.2,
+          "avgRecommendLikelihood": 4.5
+        }
+      }
+    ]
+  }
+}
+```
+
+#### 6. Get Audience Retention Analysis
+
+**Endpoint:** `GET /metrics/macro-content/audience-retention`
+
+**Description:** Analyzes audience retention patterns with detailed breakdown of high, medium, and low retention rates.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Audience retention analysis retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "videoId": "uuid",
+        "title": "High Retention Video",
+        "genre": "Training",
+        "duration": "25:15",
+        "totalSessions": 200,
+        "retentionBreakdown": {
+          "high": {
+            "count": 150,
+            "percentage": 75.0
+          },
+          "medium": {
+            "count": 35,
+            "percentage": 17.5
+          },
+          "low": {
+            "count": 15,
+            "percentage": 7.5
+          }
+        },
+        "avgRetention": 82.3
+      }
+    ]
+  }
+}
+```
+
+#### 7. Get Top Performing Genres
+
+**Endpoint:** `GET /metrics/macro-content/top-genres`
+
+**Description:** Analyzes performance metrics aggregated by video genre.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Top performing genres retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": [
+      {
+        "genre": "Leadership",
+        "totalViews": 1500,
+        "totalTimeWatched": 12500.5,
+        "avgCompletion": 78.5,
+        "videoCount": 25,
+        "avgViewsPerVideo": 60.0
+      },
+      {
+        "genre": "Innovation",
+        "totalViews": 1200,
+        "totalTimeWatched": 9800.25,
+        "avgCompletion": 75.2,
+        "videoCount": 18,
+        "avgViewsPerVideo": 66.7
+      }
+    ]
+  }
+}
+```
+
+#### 8. Get Viewing Pattern Analysis
+
+**Endpoint:** `GET /metrics/macro-content/viewing-patterns`
+
+**Description:** Comprehensive analysis of viewing patterns including completion distributions, session durations, interactions, and peak viewing times.
+
+**Query Parameters:**
+
+- `startDate` (required): Start date in ISO string format
+- `endDate` (required): End date in ISO string format
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "message": "Viewing pattern analysis retrieved successfully",
+  "data": {
+    "startDate": "2025-01-01T00:00:00.000Z",
+    "endDate": "2025-01-31T23:59:59.999Z",
+    "data": {
+      "totalSessions": 1000,
+      "completionRateDistribution": {
+        "high": 65.5,
+        "medium": 25.2,
+        "low": 9.3
+      },
+      "sessionDurationDistribution": {
+        "short": 15.8,
+        "medium": 62.4,
+        "long": 21.8
+      },
+      "interactionPatterns": {
+        "sessionsWithInteractions": 450,
+        "avgInteractionsPerSession": 3.2
+      },
+      "viewingTimes": {
+        "hourly": [
+          {
+            "hour": 0,
+            "count": 5
+          },
+          {
+            "hour": 1,
+            "count": 2
+          },
+          {
+            "hour": 9,
+            "count": 85
+          },
+          {
+            "hour": 14,
+            "count": 120
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+## Engagement Score Calculation
+
+The engagement score is calculated using a weighted formula:
+
+- **Completion Rate (30%)**: Average percentage of video watched
+- **Comments (20%)**: Comments per view ratio
+- **Feedback (20%)**: Feedback submissions per view ratio
+- **Shares (20%)**: Shares per view ratio
+- **Ratings (10%)**: Average engagement level rating
+
+**Formula:**
+
+```
+Engagement Score = (avgCompletion * 0.3) +
+                  ((commentCount/totalViews) * 100 * 0.2) +
+                  ((feedbackCount/totalViews) * 100 * 0.2) +
+                  ((shareCount/totalViews) * 100 * 0.2) +
+                  ((avgEngagementLevel * 20) * 0.1)
+```
+
+## Retention Categories
+
+- **High Retention**: ≥80% of video watched
+- **Medium Retention**: 50-79% of video watched
+- **Low Retention**: <50% of video watched
+
+## Error Handling
+
+All endpoints return appropriate error responses:
+
+- **400 Bad Request**: Invalid date parameters
+- **401 Unauthorized**: Missing or invalid authentication
+- **403 Forbidden**: Insufficient permissions (non-admin users)
+- **500 Internal Server Error**: Server-side processing errors
+
+## Rate Limiting
+
+API endpoints are subject to rate limiting. Contact your administrator for specific limits.
+
+## Data Freshness
+
+Metrics data is updated in real-time as user interactions occur. However, complex analytical queries may have a slight delay for performance optimization.
 
 ## General Notes
 
@@ -728,6 +1181,7 @@ GET /metrics/content
 
 3. Base Entity Fields:
    All entities include these base fields:
+
    ```json
    {
      "id": "uuid",
@@ -739,10 +1193,11 @@ GET /metrics/content
 
 4. Pagination:
    List endpoints support pagination through query parameters:
+
    ```
    ?page=1&limit=10
    ```
 
 5. Date Formats:
    - All dates are in ISO 8601 format
-   - Example: "2024-03-20T10:00:00Z" 
+   - Example: "2024-03-20T10:00:00Z"

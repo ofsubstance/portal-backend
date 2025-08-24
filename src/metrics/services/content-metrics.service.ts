@@ -179,24 +179,30 @@ export class ContentMetricsService {
       const sessionStartTime = new Date(session.startTime);
       const periodKey = format(sessionStartTime, dateFormat);
 
-      if (periodSums.has(periodKey)) {
+      if (
+        periodSums.has(periodKey) &&
+        session.percentageWatched !== null &&
+        session.percentageWatched !== undefined
+      ) {
         // Add to running sum for this period - ensure it's a number
         const percentageWatched = parseFloat(
           session.percentageWatched.toString(),
         );
 
-        // Add to running sum for this period
-        periodSums.set(
-          periodKey,
-          periodSums.get(periodKey) + percentageWatched,
-        );
+        if (!isNaN(percentageWatched)) {
+          // Add to running sum for this period
+          periodSums.set(
+            periodKey,
+            periodSums.get(periodKey) + percentageWatched,
+          );
 
-        // Increment count for this period
-        periodCounts.set(periodKey, periodCounts.get(periodKey) + 1);
+          // Increment count for this period
+          periodCounts.set(periodKey, periodCounts.get(periodKey) + 1);
 
-        // Add to overall totals
-        overallSum += percentageWatched;
-        overallCount++;
+          // Add to overall totals
+          overallSum += percentageWatched;
+          overallCount++;
+        }
       }
     });
 

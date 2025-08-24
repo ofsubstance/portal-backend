@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Comment } from 'src/entities/comments.entity';
+import { Feedback } from 'src/entities/feedbacks.entity';
 import { LoginEvent } from 'src/entities/login_events.entity';
 import { ShareableLink } from 'src/entities/sharable_links.entity';
 import { ShareableLinkEngagement } from 'src/entities/shareable_link_engagements.entity';
@@ -29,6 +31,8 @@ import { PerformanceMetricsService } from './services/performance-metrics.servic
       Video,
       ShareableLink,
       ShareableLinkEngagement,
+      Comment,
+      Feedback,
     ]),
   ],
   controllers: [

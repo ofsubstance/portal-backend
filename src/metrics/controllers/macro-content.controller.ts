@@ -78,4 +78,68 @@ export class MacroContentMetricsController {
       endDate,
     );
   }
+
+  @Get('engagement-scores')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async getContentEngagementScores(
+    @Query('startDate') startDateStr: string,
+    @Query('endDate') endDateStr: string,
+  ) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    return this.macroContentMetricsService.getContentEngagementScores(
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('audience-retention')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async getAudienceRetentionAnalysis(
+    @Query('startDate') startDateStr: string,
+    @Query('endDate') endDateStr: string,
+  ) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    return this.macroContentMetricsService.getAudienceRetentionAnalysis(
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('top-genres')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async getTopPerformingGenres(
+    @Query('startDate') startDateStr: string,
+    @Query('endDate') endDateStr: string,
+  ) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    return this.macroContentMetricsService.getTopPerformingGenres(
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('viewing-patterns')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async getViewingPatternAnalysis(
+    @Query('startDate') startDateStr: string,
+    @Query('endDate') endDateStr: string,
+  ) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    return this.macroContentMetricsService.getViewingPatternsAnalysis(
+      startDate,
+      endDate,
+    );
+  }
 }
