@@ -7,6 +7,12 @@ import { Repository } from 'typeorm';
 import { Video } from '../entities/videos.entity';
 import { CreateUpdateVideoDto } from './dto/createUpdateVideo.dto';
 
+// Utility function to normalize URLs by removing spaces
+function normalizeUrl(url: string): string {
+  if (!url) return url;
+  return url.replace(/\s/g, '');
+}
+
 @Injectable()
 export class VideoService {
   constructor(@InjectRepository(Video) private videoRepo: Repository<Video>) {}
@@ -63,8 +69,16 @@ export class VideoService {
 
     const thumbnail_url = cloudinaryUpload.secure_url;
 
-    const video = this.videoRepo.create({
+    // Normalize URL fields by removing spaces
+    const normalizedAttributes = {
       ...attributes,
+      video_url: normalizeUrl(attributes.video_url),
+      trailer_url: normalizeUrl(attributes.trailer_url),
+      preroll_url: normalizeUrl(attributes.preroll_url),
+    };
+
+    const video = this.videoRepo.create({
+      ...normalizedAttributes,
       thumbnail_url: thumbnail_url,
     });
     const newVideo = await this.videoRepo.save(video);
@@ -74,7 +88,20 @@ export class VideoService {
   async updateVideo(id: string, attributes: Partial<Video>) {
     const video = await this.videoRepo.findOneBy({ id: id });
     if (!video) return errorhandler(404, 'Video not found');
-    Object.assign(video, attributes);
+    
+    // Normalize URL fields by removing spaces if they exist in the update
+    const normalizedAttributes = { ...attributes };
+    if (attributes.video_url) {
+      normalizedAttributes.video_url = normalizeUrl(attributes.video_url);
+    }
+    if (attributes.trailer_url) {
+      normalizedAttributes.trailer_url = normalizeUrl(attributes.trailer_url);
+    }
+    if (attributes.preroll_url) {
+      normalizedAttributes.preroll_url = normalizeUrl(attributes.preroll_url);
+    }
+    
+    Object.assign(video, normalizedAttributes);
     const updatedVideo = await this.videoRepo.save(video);
     return successHandler('Video updated successfully', updatedVideo);
   }

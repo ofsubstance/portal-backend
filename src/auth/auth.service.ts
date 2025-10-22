@@ -91,7 +91,10 @@ export class AuthService {
   }
 
   async signUp(signupUserDto: SignUpDto, userRole: Role = Role.User) {
-    const user = await this.usersService.findUserByEmail(signupUserDto.email);
+    // Convert email to lowercase for consistency
+    const normalizedEmail = signupUserDto.email.toLowerCase();
+    
+    const user = await this.usersService.findUserByEmail(normalizedEmail);
     if (user.length) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -100,7 +103,7 @@ export class AuthService {
       signupUserDto.password,
     );
 
-    const emailToken = this.generateEmailToken(signupUserDto.email);
+    const emailToken = this.generateEmailToken(normalizedEmail);
 
     const newProfile = this.profileRepo.create({
       business_name: signupUserDto.profile.businessName,
@@ -113,6 +116,7 @@ export class AuthService {
 
     let newUser = this.userRepo.create({
       ...signupUserDto,
+      email: normalizedEmail, // Use normalized email
       password: encPassword,
       email_consent: signupUserDto.emailTermsConsent,
       sms_consent: signupUserDto.smsConsent,
@@ -122,7 +126,7 @@ export class AuthService {
     });
 
     await this.emailService.sendVerificationEmail(
-      signupUserDto.email,
+      normalizedEmail,
       emailToken,
     );
 
@@ -130,7 +134,11 @@ export class AuthService {
 
     // Send user information to GoHighLevel
     try {
-      await this.goHighLevelService.createContact(signupUserDto);
+      const ghlSignupData = {
+        ...signupUserDto,
+        email: normalizedEmail, // Use normalized email for GHL
+      };
+      await this.goHighLevelService.createContact(ghlSignupData);
     } catch (error) {
       // We don't want to fail the signup process if GHL integration fails
     }
@@ -143,7 +151,10 @@ export class AuthService {
   }
 
   async resendVerificationEmail(email: string) {
-    const [userInfo] = await this.usersService.findUserByEmail(email);
+    // Convert email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase();
+    
+    const [userInfo] = await this.usersService.findUserByEmail(normalizedEmail);
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
@@ -152,9 +163,9 @@ export class AuthService {
       throw new BadRequestException('Account already verified');
     }
 
-    const emailToken = this.generateEmailToken(email);
+    const emailToken = this.generateEmailToken(normalizedEmail);
 
-    await this.emailService.sendVerificationEmail(email, emailToken);
+    await this.emailService.sendVerificationEmail(normalizedEmail, emailToken);
 
     await this.userRepo.update(userInfo.id, {
       email_verification_token: emailToken,
@@ -207,7 +218,13 @@ export class AuthService {
   }
 
   async login(loginInfo: CredLoginDto, @Req() req: any) {
-    const [userInfo] = await this.usersService.findUserByEmail(loginInfo.email);
+    // Convert email to lowercase for consistency
+    console.log(loginInfo.email);
+    
+    const normalizedEmail = loginInfo.email.toLowerCase();
+    console.log(normalizedEmail);
+    
+    const [userInfo] = await this.usersService.findUserByEmail(normalizedEmail);
 
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
@@ -316,24 +333,18 @@ export class AuthService {
   }
 
   async googleLogin(googleLoginDto: GoogleLoginDto, @Req() req: any) {
+    // Convert email to lowercase for consistency
+    const normalizedEmail = googleLoginDto.email.toLowerCase();
+    
     let [userInfo] = await this.usersService.findUserByEmail(
-      googleLoginDto.email,
+      normalizedEmail,
     );
 
     if (!userInfo) {
-      // Split the name into firstname and lastname
-      const nameParts = googleLoginDto.name.split(' ');
-      const firstname = nameParts[0];
-      const lastname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-      const newUser = this.userRepo.create({
-        email: googleLoginDto.email,
-        firstname,
-        lastname,
-        role: Role.User,
-        status: Status.Active, // Google authenticated users are automatically verified
+      throw new BadRequestException({
+        message: 'Please sign up first',
+        details: 'This email is not registered. Please create an account through our sign-up process before using Google Sign-In.'
       });
-      userInfo = await this.userRepo.save(newUser);
     }
 
     // Update the user's last_login field to the current date
@@ -358,7 +369,10 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const user = await this.userRepo.findOne({ where: { email } });
+    // Convert email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase();
+    
+    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
 
     if (!user) {
       throw new NotFoundException('User not found.');
@@ -372,7 +386,7 @@ export class AuthService {
     user.reset_pass_token_expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await this.userRepo.save(user);
 
-    await this.emailService.sendPasswordResetEmail(email, token);
+    await this.emailService.sendPasswordResetEmail(normalizedEmail, token);
 
     return successHandler('Password reset link sent to your email.', {});
   }

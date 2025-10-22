@@ -52,6 +52,9 @@ export class UsersService {
   }
 
   async findUserByEmail(email: string) {
+    // Convert email to lowercase for consistency
+    email = email.toLowerCase();
+    
     const user = await this.userRepo.findOne({
       where: { email: email },
       select: [
