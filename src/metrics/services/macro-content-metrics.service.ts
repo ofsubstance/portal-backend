@@ -42,6 +42,7 @@ export class MacroContentMetricsService {
       const watchSessions = await this.watchSessionRepo.find({
         where: {
           startTime: Between(startDate, endDate),
+          isGuestWatchSession: false,
         },
         select: ['videoId', 'percentageWatched', 'actualTimeWatched'],
       });
@@ -62,12 +63,12 @@ export class MacroContentMetricsService {
 
       watchSessions.forEach((session) => {
         const videoId = session.videoId;
-        const percentageWatched = parseFloat(
-          session.percentageWatched?.toString() || '0',
+        const percentageWatched = Math.min(
+          parseFloat(session.percentageWatched?.toString() || '0') || 0,
+          100,
         );
-        const timeWatched = parseFloat(
-          session.actualTimeWatched?.toString() || '0',
-        );
+        const timeWatched =
+          parseFloat(session.actualTimeWatched?.toString() || '0') || 0;
 
         if (!videoStats.has(videoId)) {
           videoStats.set(videoId, {
@@ -83,7 +84,7 @@ export class MacroContentMetricsService {
         stats.sessions.push(session);
         stats.totalSessions++;
         stats.totalPercentageSum += percentageWatched;
-        stats.totalTimeWatched += timeWatched;
+        stats.totalTimeWatched += timeWatched / 60; // convert seconds → minutes
       });
 
       // Get video details
@@ -141,6 +142,7 @@ export class MacroContentMetricsService {
       const watchSessions = await this.watchSessionRepo.find({
         where: {
           startTime: Between(startDate, endDate),
+          isGuestWatchSession: false,
         },
         select: ['videoId', 'percentageWatched', 'userSessionId'],
       });
@@ -161,8 +163,9 @@ export class MacroContentMetricsService {
 
       watchSessions.forEach((session) => {
         const videoId = session.videoId;
-        const percentageWatched = parseFloat(
-          session.percentageWatched?.toString() || '0',
+        const percentageWatched = Math.min(
+          parseFloat(session.percentageWatched?.toString() || '0') || 0,
+          100,
         );
 
         if (!videoStats.has(videoId)) {
@@ -374,10 +377,14 @@ export class MacroContentMetricsService {
         select: ['id', 'title', 'genre'],
       });
 
-      // Calculate clickthrough rates and combine with video details
-      const clickthroughRates = Array.from(videoStats.values())
+      // Unique visitor rate: what % of total views are first-time visitors
+      const linkEngagementStats = Array.from(videoStats.values())
         .map((stats) => {
           const video = videos.find((v) => v.id === stats.videoId);
+          const uniqueVisitorRate =
+            stats.totalViews > 0
+              ? Math.round((stats.uniqueEngagements / stats.totalViews) * 100 * 100) / 100
+              : 0;
 
           return {
             videoId: stats.videoId,
@@ -385,21 +392,16 @@ export class MacroContentMetricsService {
             genre: video?.genre || 'Unknown',
             totalLinks: stats.totalLinks,
             totalViews: stats.totalViews,
-            uniqueEngagements: stats.uniqueEngagements,
-            clickthroughRate:
-              stats.totalViews > 0
-                ? Math.round(
-                    (stats.uniqueEngagements / stats.totalViews) * 100 * 100,
-                  ) / 100
-                : 0,
+            uniqueVisitors: stats.uniqueEngagements,
+            uniqueVisitorRate,
           };
         })
-        .sort((a, b) => b.clickthroughRate - a.clickthroughRate);
+        .sort((a, b) => b.totalViews - a.totalViews);
 
-      return successHandler('Link clickthrough rates retrieved successfully', {
+      return successHandler('Link engagement stats retrieved successfully', {
         startDate,
         endDate,
-        data: clickthroughRates,
+        data: linkEngagementStats,
       });
     } catch (error) {
       this.logger.error('Error getting link clickthrough rates:', error);
@@ -415,130 +417,122 @@ export class MacroContentMetricsService {
     );
 
     try {
-      // Get all videos first
       const videos = await this.videoRepo.find({
         select: ['id', 'title', 'genre', 'duration', 'tags'],
       });
 
-      const engagementScores = await Promise.all(
-        videos.map(async (video) => {
-          // Get watch sessions
-          const watchSessions = await this.watchSessionRepo.find({
-            where: {
-              videoId: video.id,
-              startTime: Between(startDate, endDate),
-            },
-            select: ['percentageWatched', 'userSessionId'],
-          });
+      if (videos.length === 0) {
+        return successHandler('Content engagement scores retrieved successfully', {
+          startDate, endDate, data: [],
+        });
+      }
 
-          // Get comments
-          const comments = await this.commentRepo.find({
-            where: {
-              video: { id: video.id },
-              createdAt: Between(startDate, endDate),
-            },
-          });
+      const videoIds = videos.map((v) => v.id);
 
-          // Get feedback
-          const feedbacks = await this.feedbackRepo.find({
-            where: {
-              video: { id: video.id },
-              createdAt: Between(startDate, endDate),
-            },
-          });
+      // 4 aggregate queries instead of N+1
+      const [watchStats, commentStats, feedbackStats, shareStats] =
+        await Promise.all([
+          this.watchSessionRepo
+            .createQueryBuilder('ws')
+            .select('ws.videoId', 'videoId')
+            .addSelect('COUNT(*)', 'totalViews')
+            .addSelect('COUNT(DISTINCT ws.userSessionId)', 'uniqueViewers')
+            .addSelect('AVG(CAST(ws.percentageWatched AS FLOAT))', 'avgCompletion')
+            .where('ws.videoId IN (:...videoIds)', { videoIds })
+            .andWhere('ws.startTime BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .andWhere('ws.isGuestWatchSession = :isGuest', { isGuest: false })
+            .groupBy('ws.videoId')
+            .getRawMany(),
 
-          // Get shares
-          const shares = await this.shareableLinkRepo.find({
-            where: {
-              video: { id: video.id },
-              createdAt: Between(startDate, endDate),
-            },
-          });
+          this.commentRepo
+            .createQueryBuilder('c')
+            .select('video.id', 'videoId')
+            .addSelect('COUNT(*)', 'commentCount')
+            .innerJoin('c.video', 'video')
+            .where('video.id IN (:...videoIds)', { videoIds })
+            .andWhere('c.createdAt BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .groupBy('video.id')
+            .getRawMany(),
 
-          // Calculate metrics
-          const totalViews = watchSessions.length;
-          const uniqueViewers = new Set(
-            watchSessions
-              .filter((s) => s.userSessionId)
-              .map((s) => s.userSessionId),
-          ).size;
+          this.feedbackRepo
+            .createQueryBuilder('f')
+            .select('video.id', 'videoId')
+            .addSelect('COUNT(*)', 'feedbackCount')
+            .addSelect('AVG(f.engagementLevel)', 'avgEngagementLevel')
+            .addSelect('AVG(f.recommendLikelihood)', 'avgRecommendLikelihood')
+            .innerJoin('f.video', 'video')
+            .where('video.id IN (:...videoIds)', { videoIds })
+            .andWhere('f.createdAt BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .groupBy('video.id')
+            .getRawMany(),
 
-          const avgCompletion =
-            watchSessions.length > 0
-              ? watchSessions.reduce((sum, session) => {
-                  const percentage = parseFloat(
-                    session.percentageWatched?.toString() || '0',
-                  );
-                  return !isNaN(percentage) ? sum + percentage : sum;
-                }, 0) / watchSessions.length
-              : 0;
+          this.shareableLinkRepo
+            .createQueryBuilder('sl')
+            .select('video.id', 'videoId')
+            .addSelect('COUNT(*)', 'shareCount')
+            .innerJoin('sl.video', 'video')
+            .where('video.id IN (:...videoIds)', { videoIds })
+            .andWhere('sl.createdAt BETWEEN :startDate AND :endDate', { startDate, endDate })
+            .groupBy('video.id')
+            .getRawMany(),
+        ]);
 
-          const avgEngagementLevel =
-            feedbacks.length > 0
-              ? feedbacks.reduce((sum, feedback) => {
-                  return sum + (feedback.engagementLevel || 0);
-                }, 0) / feedbacks.length
-              : 0;
+      const watchMap = new Map(watchStats.map((s) => [s.videoId, s]));
+      const commentMap = new Map(commentStats.map((s) => [s.videoId, parseInt(s.commentCount)]));
+      const feedbackMap = new Map(feedbackStats.map((s) => [s.videoId, s]));
+      const shareMap = new Map(shareStats.map((s) => [s.videoId, parseInt(s.shareCount)]));
 
-          const avgRecommendLikelihood =
-            feedbacks.length > 0
-              ? feedbacks.reduce((sum, feedback) => {
-                  return sum + (feedback.recommendLikelihood || 0);
-                }, 0) / feedbacks.length
-              : 0;
+      const engagementScores = videos.map((video) => {
+        const ws = watchMap.get(video.id);
+        const totalViews = ws ? parseInt(ws.totalViews) : 0;
+        const uniqueViewers = ws ? parseInt(ws.uniqueViewers) : 0;
+        const avgCompletion = ws ? parseFloat(ws.avgCompletion) || 0 : 0;
 
-          // Calculate weighted engagement score
-          // Weights: Completion (40%), Engagement Level (20%), Recommend (15%),
-          // Comments (15%), Shares (10%)
-          const completionScore = (avgCompletion / 100) * 40;
-          const engagementLevelScore = (avgEngagementLevel / 5) * 20;
-          const recommendScore = (avgRecommendLikelihood / 5) * 15;
-          const commentScore = Math.min(comments.length / 10, 1) * 15;
-          const shareScore = Math.min(shares.length / 5, 1) * 10;
+        const fb = feedbackMap.get(video.id);
+        const feedbackCount = fb ? parseInt(fb.feedbackCount) : 0;
+        const avgEngagementLevel = fb ? parseFloat(fb.avgEngagementLevel) || 0 : 0;
+        const avgRecommendLikelihood = fb ? parseFloat(fb.avgRecommendLikelihood) || 0 : 0;
 
-          const engagementScore =
-            Math.round(
-              (completionScore +
-                engagementLevelScore +
-                recommendScore +
-                commentScore +
-                shareScore) *
-                100,
-            ) / 100;
+        const commentCount = commentMap.get(video.id) || 0;
+        const shareCount = shareMap.get(video.id) || 0;
 
-          return {
-            videoId: video.id,
-            title: video.title,
-            genre: video.genre,
-            duration: video.duration,
-            tags: video.tags,
-            engagementScore,
-            metrics: {
-              totalViews,
-              uniqueViewers,
-              avgCompletion: Math.round(avgCompletion * 100) / 100,
-              commentCount: comments.length,
-              feedbackCount: feedbacks.length,
-              shareCount: shares.length,
-              avgEngagementLevel: Math.round(avgEngagementLevel * 100) / 100,
-              avgRecommendLikelihood:
-                Math.round(avgRecommendLikelihood * 100) / 100,
-            },
-          };
-        }),
-      );
+        // Weighted score: Completion 40%, EngagementLevel 20%, Recommend 15%, Comments 15%, Shares 10%
+        const engagementScore =
+          Math.round(
+            (
+              (avgCompletion / 100) * 40 +
+              (avgEngagementLevel / 5) * 20 +
+              (avgRecommendLikelihood / 5) * 15 +
+              Math.min(commentCount / 10, 1) * 15 +
+              Math.min(shareCount / 5, 1) * 10
+            ) * 100,
+          ) / 100;
 
-      // Sort by engagement score descending
+        return {
+          videoId: video.id,
+          title: video.title,
+          genre: video.genre,
+          duration: video.duration,
+          tags: video.tags,
+          engagementScore,
+          metrics: {
+            totalViews,
+            uniqueViewers,
+            avgCompletion: Math.round(avgCompletion * 100) / 100,
+            commentCount,
+            feedbackCount,
+            shareCount,
+            avgEngagementLevel: Math.round(avgEngagementLevel * 100) / 100,
+            avgRecommendLikelihood: Math.round(avgRecommendLikelihood * 100) / 100,
+          },
+        };
+      });
+
       engagementScores.sort((a, b) => b.engagementScore - a.engagementScore);
 
-      return successHandler(
-        'Content engagement scores retrieved successfully',
-        {
-          startDate,
-          endDate,
-          data: engagementScores,
-        },
-      );
+      return successHandler('Content engagement scores retrieved successfully', {
+        startDate, endDate, data: engagementScores,
+      });
     } catch (error) {
       this.logger.error('Error getting content engagement scores:', error);
       throw error;
@@ -585,9 +579,9 @@ export class MacroContentMetricsService {
             const percentageWatched = parseFloat(
               session.percentageWatched?.toString() || '0',
             );
-            const timeWatchedMinutes = parseFloat(
-              session.actualTimeWatched?.toString() || '0',
-            );
+            // actualTimeWatched is stored in seconds — convert to minutes
+            const timeWatchedMinutes =
+              parseFloat(session.actualTimeWatched?.toString() || '0') / 60;
 
             if (percentageWatched >= 80) {
               highRetention++;
@@ -602,13 +596,11 @@ export class MacroContentMetricsService {
 
           avgWatchTimeMinutes = totalWatchTimeMinutes / watchSessions.length;
 
-          // Calculate drop-off points (in minutes)
+          // Drop-off points in minutes (actualTimeWatched stored in seconds)
           const dropOffPoints = watchSessions
             .map((session) => {
-              const timeWatchedMinutes = parseFloat(
-                session.actualTimeWatched?.toString() || '0',
-              );
-              return Math.round(timeWatchedMinutes * 100) / 100;
+              const seconds = parseFloat(session.actualTimeWatched?.toString() || '0');
+              return Math.round((seconds / 60) * 100) / 100;
             })
             .sort((a, b) => a - b);
 
@@ -721,6 +713,7 @@ export class MacroContentMetricsService {
         ])
         .where('watch_session.startTime >= :startDate', { startDate })
         .andWhere('watch_session.startTime <= :endDate', { endDate })
+        .andWhere('watch_session.isGuestWatchSession = :isGuest', { isGuest: false })
         .groupBy('watch_session.videoId')
         .getRawMany();
 
@@ -739,42 +732,48 @@ export class MacroContentMetricsService {
         select: ['id', 'title', 'genre'],
       });
 
-      // Aggregate data by genre
+      // Aggregate data by genre — split comma-separated genre strings
       const genreStats = new Map();
 
       watchData.forEach((data) => {
         const video = videos.find((v) => v.id === data.watch_session_videoId);
-        const genre = video?.genre || 'Unknown';
         const totalViews = parseInt(data.totalViews) || 0;
         const avgCompletion = parseFloat(data.avgCompletion) || 0;
-        const totalTimeWatched = parseFloat(data.totalTimeWatched) || 0;
+        // actualTimeWatched is stored in seconds — convert to minutes
+        const totalTimeWatchedMinutes = (parseFloat(data.totalTimeWatched) || 0) / 60;
 
-        if (!genreStats.has(genre)) {
-          genreStats.set(genre, {
-            genre,
-            totalViews: 0,
-            totalTimeWatched: 0,
-            totalCompletionSum: 0,
-            videoCount: 0,
-          });
-        }
+        // A video with "Drama, Documentary" contributes to both genres
+        const genres = (video?.genre || 'Unknown')
+          .split(',')
+          .map((g) => g.trim())
+          .filter(Boolean);
 
-        const stats = genreStats.get(genre);
-        stats.totalViews += totalViews;
-        stats.totalTimeWatched += totalTimeWatched;
-        stats.totalCompletionSum += avgCompletion * totalViews;
-        stats.videoCount++;
+        genres.forEach((genre) => {
+          if (!genreStats.has(genre)) {
+            genreStats.set(genre, {
+              genre,
+              totalViews: 0,
+              totalTimeWatchedMinutes: 0,
+              totalCompletionSum: 0,
+              videoCount: 0,
+            });
+          }
+
+          const stats = genreStats.get(genre);
+          stats.totalViews += totalViews;
+          stats.totalTimeWatchedMinutes += totalTimeWatchedMinutes;
+          stats.totalCompletionSum += avgCompletion * totalViews;
+          stats.videoCount++;
+        });
       });
 
-      // Calculate averages and format results
       const genrePerformance = Array.from(genreStats.values()).map((stats) => ({
         genre: stats.genre,
         totalViews: stats.totalViews,
-        totalTimeWatched: Math.round(stats.totalTimeWatched * 100) / 100,
+        totalTimeWatchedMinutes: Math.round(stats.totalTimeWatchedMinutes * 100) / 100,
         avgCompletion:
           stats.totalViews > 0
-            ? Math.round((stats.totalCompletionSum / stats.totalViews) * 100) /
-              100
+            ? Math.round((stats.totalCompletionSum / stats.totalViews) * 100) / 100
             : 0,
         videoCount: stats.videoCount,
         avgViewsPerVideo:
@@ -807,6 +806,7 @@ export class MacroContentMetricsService {
       const watchSessions = await this.watchSessionRepo.find({
         where: {
           startTime: Between(startDate, endDate),
+          isGuestWatchSession: false,
         },
         select: [
           'videoId',
@@ -858,8 +858,9 @@ export class MacroContentMetricsService {
       const viewingHours = Array(24).fill(0);
 
       watchSessions.forEach((session) => {
-        const percentageWatched = parseFloat(
-          session.percentageWatched?.toString() || '0',
+        const percentageWatched = Math.min(
+          parseFloat(session.percentageWatched?.toString() || '0') || 0,
+          100,
         );
         const timeWatched = parseFloat(
           session.actualTimeWatched?.toString() || '0',
@@ -907,14 +908,12 @@ export class MacroContentMetricsService {
         }),
       );
 
-      // Calculate session duration stats
-      const avgSessionDuration =
+      // sessionDurations is in seconds; convert average to minutes for display
+      const avgSessionDurationSeconds =
         sessionDurations.length > 0
-          ? Math.round(
-              sessionDurations.reduce((sum, duration) => sum + duration, 0) /
-                sessionDurations.length,
-            )
+          ? sessionDurations.reduce((sum, d) => sum + d, 0) / sessionDurations.length
           : 0;
+      const avgSessionDurationMinutes = Math.round((avgSessionDurationSeconds / 60) * 10) / 10;
 
       // Count interactions by video
       const videoInteractions = new Map();
@@ -975,7 +974,7 @@ export class MacroContentMetricsService {
             uniqueViewers,
             completionDistribution,
             sessionDurations: {
-              average: avgSessionDuration,
+              averageMinutes: avgSessionDurationMinutes,
               totalSessions: sessionDurations.length,
             },
             interactions: {

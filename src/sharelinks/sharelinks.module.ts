@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GoHighLevelModule } from 'src/gohighlevel/gohighlevel.module';
 import { ShareableLink } from 'src/entities/sharable_links.entity';
 import { ShareableLinkEngagement } from 'src/entities/shareable_link_engagements.entity';
 import { User } from 'src/entities/users.entity';
@@ -15,6 +16,7 @@ import { SharelinksService } from './sharelinks.service';
       Video,
       ShareableLinkEngagement,
     ]),
+    GoHighLevelModule,
   ],
   controllers: [SharelinksController],
   providers: [SharelinksService],

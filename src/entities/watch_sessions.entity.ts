@@ -1,12 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { UserSession } from './user_sessions.entity';
 import { Video } from './videos.entity';
 
 @Entity('watch_sessions')
 export class WatchSession extends BaseEntity {
-  // @ManyToOne(() => UserSession, { nullable: true })
-  // @JoinColumn({ name: 'userSessionId' })
-  // userSession: UserSession;
+  @ManyToOne(() => UserSession, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'userSessionId' })
+  userSession: UserSession;
 
   @Column({ nullable: true })
   userSessionId: string;
@@ -30,15 +31,12 @@ export class WatchSession extends BaseEntity {
   @Column({ type: 'decimal', precision: 5, scale: 2 })
   actualTimeWatched: number;
 
-  //percentageWatched
   @Column({ type: 'decimal', precision: 5, scale: 2 })
   percentageWatched: number;
 
-  //user event json
   @Column({ type: 'jsonb', nullable: true })
   userEvent: UserEvent[];
 
-  //user metadata json
   @Column({ type: 'jsonb', nullable: true })
   userMetadata: UserMetadata;
 }

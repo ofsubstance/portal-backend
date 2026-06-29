@@ -6,6 +6,10 @@ import { Video } from 'src/entities/videos.entity';
 import { WatchSession } from 'src/entities/watch_sessions.entity';
 import { successHandler } from 'src/utils/response.handler';
 import { Between, Repository } from 'typeorm';
+import {
+  WATCH_COMPLETED_THRESHOLD,
+  WATCH_PARTIAL_THRESHOLD,
+} from '../constants/thresholds';
 import { DurationSpan } from '../enums/duration-span.enum';
 import {
   createPeriodMap,
@@ -65,13 +69,11 @@ export class ContentMetricsService {
     const span = this.timePeriodToDurationSpan(period);
 
     // Process the date parameters to get consistent formatting
-    const {
-      startPeriodString,
-      endPeriodString,
-      dateFormat,
-      queryStartDate,
-      queryEndDate,
-    } = processDateParams(startDate, endDate, span);
+    const { dateFormat, queryStartDate, queryEndDate } = processDateParams(
+      startDate,
+      endDate,
+      span,
+    );
 
     // Get all periods in the range for time buckets
     const periodRange = getPeriodsInRange(queryStartDate, queryEndDate, span);
@@ -79,11 +81,11 @@ export class ContentMetricsService {
     // Initialize period map with zero values
     const periodMap = createPeriodMap(periodRange, dateFormat);
 
-    // Get all watch sessions in the time range
     const watchSessions = await this.watchSessionRepo.find({
       where: {
         videoId,
         startTime: Between(queryStartDate, queryEndDate),
+        isGuestWatchSession: false,
       },
     });
 
@@ -147,13 +149,11 @@ export class ContentMetricsService {
     const span = this.timePeriodToDurationSpan(period);
 
     // Process the date parameters to get consistent formatting
-    const {
-      startPeriodString,
-      endPeriodString,
-      dateFormat,
-      queryStartDate,
-      queryEndDate,
-    } = processDateParams(startDate, endDate, span);
+    const { dateFormat, queryStartDate, queryEndDate } = processDateParams(
+      startDate,
+      endDate,
+      span,
+    );
 
     // Get all periods in the range for time buckets
     const periodRange = getPeriodsInRange(queryStartDate, queryEndDate, span);
@@ -167,6 +167,7 @@ export class ContentMetricsService {
       where: {
         videoId,
         startTime: Between(queryStartDate, queryEndDate),
+        isGuestWatchSession: false,
       },
       select: ['startTime', 'percentageWatched'],
     });
@@ -272,13 +273,11 @@ export class ContentMetricsService {
     const span = this.timePeriodToDurationSpan(period);
 
     // Process the date parameters to get consistent formatting
-    const {
-      startPeriodString,
-      endPeriodString,
-      dateFormat,
-      queryStartDate,
-      queryEndDate,
-    } = processDateParams(startDate, endDate, span);
+    const { dateFormat, queryStartDate, queryEndDate } = processDateParams(
+      startDate,
+      endDate,
+      span,
+    );
 
     // Get all periods in the range for time buckets
     const periodRange = getPeriodsInRange(queryStartDate, queryEndDate, span);
@@ -357,20 +356,17 @@ export class ContentMetricsService {
       `Getting ${period} completion and drop-off rates for video ${videoId} from ${startDate.toISOString()} to ${endDate.toISOString()}`,
     );
 
-    // Define thresholds
-    const COMPLETION_THRESHOLD = 70; // 70% completion
-    const DROPOFF_THRESHOLD = 30; // 30% drop-off
+    const COMPLETION_THRESHOLD = WATCH_COMPLETED_THRESHOLD;
+    const DROPOFF_THRESHOLD = WATCH_PARTIAL_THRESHOLD;
 
     const span = this.timePeriodToDurationSpan(period);
 
     // Process the date parameters to get consistent formatting
-    const {
-      startPeriodString,
-      endPeriodString,
-      dateFormat,
-      queryStartDate,
-      queryEndDate,
-    } = processDateParams(startDate, endDate, span);
+    const { dateFormat, queryStartDate, queryEndDate } = processDateParams(
+      startDate,
+      endDate,
+      span,
+    );
 
     // Get all periods in the range for time buckets
     const periodRange = getPeriodsInRange(queryStartDate, queryEndDate, span);
@@ -386,6 +382,7 @@ export class ContentMetricsService {
       where: {
         videoId,
         startTime: Between(queryStartDate, queryEndDate),
+        isGuestWatchSession: false,
       },
       select: ['startTime', 'percentageWatched'],
     });
@@ -400,28 +397,18 @@ export class ContentMetricsService {
       const sessionStartTime = new Date(session.startTime);
       const periodKey = format(sessionStartTime, dateFormat);
 
-      // Ensure percentageWatched is a number and handle both decimal formats
-      const rawPercentage = parseFloat(session.percentageWatched.toString());
-
-      // Check if the value is already in percentage form or in decimal form
-      let percentageWatched;
-      if (rawPercentage > 1.0) {
-        // Already in percentage form, e.g., 75 means 75%
-        percentageWatched = rawPercentage;
-      } else {
-        // In decimal form, e.g., 0.75 means 75%
-        percentageWatched = rawPercentage * 100;
-      }
+      // percentageWatched is stored as 0-100 (e.g. 75 means 75%)
+      const percentageWatched = parseFloat(
+        session.percentageWatched.toString(),
+      );
 
       if (periodTotalSessions.has(periodKey)) {
-        // Increment total count for this period
         periodTotalSessions.set(
           periodKey,
           periodTotalSessions.get(periodKey) + 1,
         );
         totalSessions++;
 
-        // Check if completed (> COMPLETION_THRESHOLD)
         if (percentageWatched > COMPLETION_THRESHOLD) {
           periodCompletedSessions.set(
             periodKey,

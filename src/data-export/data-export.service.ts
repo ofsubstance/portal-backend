@@ -12,6 +12,16 @@ import { WatchSession } from 'src/entities/watch_sessions.entity';
 import { Repository } from 'typeorm';
 import * as XLSX from 'xlsx';
 
+const CHUNK_SIZE = 1000;
+
+// Columns omitted from the exported Users sheet
+const USER_SENSITIVE_COLUMNS = new Set([
+  'password',
+  'reset_pass_token',
+  'email_verification_token',
+  'reset_pass_token_expiry',
+]);
+
 @Injectable()
 export class DataExportService {
   private readonly logger = new Logger('DataExportService');
@@ -40,61 +50,66 @@ export class DataExportService {
   async exportAllData(): Promise<Uint8Array> {
     this.logger.log('Starting full database export');
 
-    try {
-      // Create a new workbook
-      const workbook = XLSX.utils.book_new();
+    const workbook = XLSX.utils.book_new();
 
-      // Export each table to its own worksheet
-      await Promise.all([
-        this.exportTable(workbook, 'Users', this.userRepo),
-        this.exportTable(workbook, 'Videos', this.videoRepo),
-        this.exportTable(workbook, 'Comments', this.commentRepo),
-        this.exportTable(workbook, 'Feedback', this.feedbackRepo),
-        this.exportTable(workbook, 'Login Events', this.loginEventRepo),
-        this.exportTable(workbook, 'User Profiles', this.profileRepo),
-        this.exportTable(workbook, 'User Sessions', this.userSessionRepo),
-        this.exportTable(workbook, 'Shareable Links', this.shareableLinkRepo),
-        this.exportTable(workbook, 'Watch Sessions', this.watchSessionRepo),
-      ]);
+    await Promise.all([
+      this.exportTable(workbook, 'Users', this.userRepo, USER_SENSITIVE_COLUMNS),
+      this.exportTable(workbook, 'Videos', this.videoRepo),
+      this.exportTable(workbook, 'Comments', this.commentRepo),
+      this.exportTable(workbook, 'Feedback', this.feedbackRepo),
+      this.exportTable(workbook, 'Login Events', this.loginEventRepo),
+      this.exportTable(workbook, 'User Profiles', this.profileRepo),
+      this.exportTable(workbook, 'User Sessions', this.userSessionRepo),
+      this.exportTable(workbook, 'Shareable Links', this.shareableLinkRepo),
+      this.exportTable(workbook, 'Watch Sessions', this.watchSessionRepo),
+    ]);
 
-      // Write to buffer with proper options
-      const wbout = XLSX.write(workbook, {
-        type: 'buffer',
-        bookType: 'xlsx',
-        bookSST: false,
-        compression: true,
-      });
+    const wbout = XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx',
+      bookSST: false,
+      compression: true,
+    });
 
-      return new Uint8Array(wbout);
-    } catch (error) {
-      this.logger.error('Error during data export', error);
-      throw error;
-    }
+    return new Uint8Array(wbout);
   }
 
   private async exportTable<T>(
     workbook: XLSX.WorkBook,
     sheetName: string,
     repository: Repository<T>,
+    sensitiveColumns: Set<string> = new Set(),
   ): Promise<void> {
     this.logger.log(`Exporting ${sheetName}`);
 
     try {
-      // Get all records with explicit relations
-      const records = await repository.find({
-        relations: [], // Empty array to avoid circular references
-      });
+      // Load records in chunks to avoid OOM on large tables
+      const allRecords: T[] = [];
+      let offset = 0;
+      let chunk: T[];
 
-      if (records.length === 0) {
+      do {
+        chunk = await repository.find({
+          skip: offset,
+          take: CHUNK_SIZE,
+          relations: [],
+        });
+        allRecords.push(...chunk);
+        offset += CHUNK_SIZE;
+      } while (chunk.length === CHUNK_SIZE);
+
+      if (allRecords.length === 0) {
         const ws = XLSX.utils.aoa_to_sheet([['No data available']]);
         XLSX.utils.book_append_sheet(workbook, ws, sheetName);
         return;
       }
 
-      // Process records to handle special data types
-      const processedRecords = records.map((record) => {
-        const processedRecord = {};
+      const processedRecords = allRecords.map((record) => {
+        const processedRecord: Record<string, any> = {};
+
         Object.entries(record).forEach(([key, value]) => {
+          if (sensitiveColumns.has(key)) return; // omit sensitive fields
+
           try {
             if (value === null || value === undefined) {
               processedRecord[key] = '';
@@ -103,49 +118,36 @@ export class DataExportService {
             } else if (Array.isArray(value)) {
               processedRecord[key] = JSON.stringify(value);
             } else if (typeof value === 'object') {
-              // Handle circular references
               const seen = new WeakSet();
-              const stringifyWithCircular = (obj: any): string => {
-                return JSON.stringify(obj, (key, value) => {
-                  if (typeof value === 'object' && value !== null) {
-                    if (seen.has(value)) {
-                      return '[Circular]';
-                    }
-                    seen.add(value);
-                  }
-                  return value;
-                });
-              };
-              processedRecord[key] = stringifyWithCircular(value);
+              processedRecord[key] = JSON.stringify(value, (_k, v) => {
+                if (typeof v === 'object' && v !== null) {
+                  if (seen.has(v)) return '[Circular]';
+                  seen.add(v);
+                }
+                return v;
+              });
             } else {
               processedRecord[key] = value;
             }
-          } catch (error) {
-            this.logger.warn(
-              `Error processing field ${key} in ${sheetName}`,
-              error,
-            );
-            processedRecord[key] = '[Error: Unable to process value]';
+          } catch {
+            processedRecord[key] = '[Error: unable to serialize]';
           }
         });
+
         return processedRecord;
       });
 
-      // Get headers from the first record
-      const headers = Object.keys(processedRecords[0] || {});
+      const headers = Object.keys(processedRecords[0] ?? {});
 
-      // Create worksheet with proper options
       const ws = XLSX.utils.json_to_sheet(processedRecords, {
         header: headers,
         cellDates: true,
         dateNF: 'yyyy-mm-dd hh:mm:ss',
       });
 
-      // Add the worksheet to the workbook
       XLSX.utils.book_append_sheet(workbook, ws, sheetName);
     } catch (error) {
       this.logger.error(`Error exporting ${sheetName}`, error);
-      // Create error sheet
       const ws = XLSX.utils.aoa_to_sheet([
         [`Error exporting ${sheetName}: ${error.message}`],
       ]);

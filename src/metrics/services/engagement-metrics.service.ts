@@ -8,6 +8,10 @@ import { WatchSession } from 'src/entities/watch_sessions.entity';
 import { successHandler } from 'src/utils/response.handler';
 import { Between, Repository } from 'typeorm';
 import { TimeFrameDto } from '../dto/time-frame.dto';
+import {
+  WATCH_COMPLETED_THRESHOLD,
+  WATCH_PARTIAL_THRESHOLD,
+} from '../constants/thresholds';
 import { DurationSpan } from '../enums/duration-span.enum';
 import {
   createPeriodMap,
@@ -18,10 +22,6 @@ import {
 @Injectable()
 export class EngagementMetricsService {
   private readonly logger = new Logger('EngagementMetricsService');
-
-  // Constants for content completion thresholds
-  private readonly CONTENT_FINISHED_THRESHOLD = 0.8; // 80%
-  private readonly CONTENT_DROPPED_THRESHOLD = 0.5; // 50%
 
   constructor(
     @InjectRepository(User)
@@ -58,12 +58,11 @@ export class EngagementMetricsService {
     const periodMap = createPeriodMap(periodRange, dateFormat);
     const sessionCountMap = createPeriodMap(periodRange, dateFormat);
 
-    // Find all completed sessions in the time range
+    // Completed sessions that started within the selected range
     const sessions = await this.userSessionRepo.find({
       where: {
         startTime: Between(queryStartDate, queryEndDate),
-        endTime: Between(queryStartDate, queryEndDate),
-        isActive: false, // Only include completed sessions
+        isActive: false,
       },
     });
 
@@ -496,10 +495,10 @@ export class EngagementMetricsService {
       `Calculating content watch rates from ${startDate.toISOString()} to ${endDate.toISOString()}`,
     );
 
-    // Fetch more detailed data for enhanced analytics
     const sessions = await this.watchSessionRepo.find({
       where: {
         startTime: Between(startDate, endDate),
+        isGuestWatchSession: false,
       },
       select: [
         'percentageWatched',
@@ -528,14 +527,12 @@ export class EngagementMetricsService {
       });
     }
 
-    // Calculate watch rates for each session
+    // actualTimeWatched is in seconds; percentageWatched is clamped to 0–100
     const watchRates = sessions.map((session) => ({
-      watchRate: session.percentageWatched,
-      timeWatched: session.actualTimeWatched,
-      isFinished:
-        session.percentageWatched >= this.CONTENT_FINISHED_THRESHOLD * 100,
-      isDropped:
-        session.percentageWatched < this.CONTENT_DROPPED_THRESHOLD * 100,
+      watchRate: Math.min(Number(session.percentageWatched) || 0, 100),
+      timeWatchedMinutes: (Number(session.actualTimeWatched) || 0) / 60,
+      isFinished: Number(session.percentageWatched) >= WATCH_COMPLETED_THRESHOLD,
+      isDropped: Number(session.percentageWatched) < WATCH_PARTIAL_THRESHOLD,
       videoId: session.videoId,
       userSessionId: session.userSessionId,
       // Calculate session duration if available
@@ -565,12 +562,11 @@ export class EngagementMetricsService {
     const finishRate = (finishedSessions / sessions.length) * 100;
     const dropRate = (droppedSessions / sessions.length) * 100;
 
-    // Calculate time-based metrics
-    const totalTimeWatched = watchRates.reduce(
-      (sum, session) => sum + session.timeWatched,
+    const totalTimeWatchedMinutes = watchRates.reduce(
+      (sum, session) => sum + session.timeWatchedMinutes,
       0,
     );
-    const averageTimeWatched = totalTimeWatched / sessions.length;
+    const averageTimeWatchedMinutes = totalTimeWatchedMinutes / sessions.length;
 
     // Count unique videos and user sessions
     const uniqueVideos = new Set(watchRates.map((s) => s.videoId));
@@ -596,9 +592,8 @@ export class EngagementMetricsService {
       finishRate: Math.round(finishRate * 100) / 100,
       dropRate: Math.round(dropRate * 100) / 100,
       totalSessions: sessions.length,
-      // Enhanced metrics
-      averageTimeWatched: Math.round(averageTimeWatched * 100) / 100,
-      totalTimeWatched: Math.round(totalTimeWatched * 100) / 100,
+      averageTimeWatchedMinutes: Math.round(averageTimeWatchedMinutes * 100) / 100,
+      totalTimeWatchedMinutes: Math.round(totalTimeWatchedMinutes * 100) / 100,
       totalUniqueVideos: uniqueVideos.size,
       totalUniqueSessions: uniqueSessions.size,
       interactionRate: Math.round(interactionRate * 100) / 100,
@@ -646,10 +641,10 @@ export class EngagementMetricsService {
       ]),
     );
 
-    // Get more detailed session data
     const sessions = await this.watchSessionRepo.find({
       where: {
         startTime: Between(queryStartDate, queryEndDate),
+        isGuestWatchSession: false,
       },
       select: [
         'startTime',
@@ -666,15 +661,15 @@ export class EngagementMetricsService {
       const periodKey = format(new Date(session.startTime), dateFormat);
       if (watchRateMap.has(periodKey)) {
         const watchRate = session.percentageWatched;
-        const isFinished = watchRate >= this.CONTENT_FINISHED_THRESHOLD * 100;
-        const isDropped = watchRate < this.CONTENT_DROPPED_THRESHOLD * 100;
+        const isFinished = watchRate >= WATCH_COMPLETED_THRESHOLD;
+        const isDropped = watchRate < WATCH_PARTIAL_THRESHOLD;
         const interactions = session.userEvent?.length || 0;
 
         // Update running totals
         watchRateMap.set(periodKey, watchRateMap.get(periodKey) + watchRate);
         timeWatchedMap.set(
           periodKey,
-          timeWatchedMap.get(periodKey) + session.actualTimeWatched,
+          timeWatchedMap.get(periodKey) + Number(session.actualTimeWatched) / 60,
         );
         interactionCountMap.set(
           periodKey,
@@ -722,10 +717,9 @@ export class EngagementMetricsService {
         const dropRate =
           sessionCount > 0 ? (dropRateMap.get(period) / sessionCount) * 100 : 0;
 
-        // Calculate enhanced metrics
-        const totalTimeWatched = timeWatchedMap.get(period) || 0;
-        const averageTimeWatched =
-          sessionCount > 0 ? totalTimeWatched / sessionCount : 0;
+        const totalTimeWatchedMinutes = timeWatchedMap.get(period) || 0;
+        const averageTimeWatchedMinutes =
+          sessionCount > 0 ? totalTimeWatchedMinutes / sessionCount : 0;
         const uniqueVideosCount = uniqueVideosMap.get(period)?.size || 0;
         const uniqueSessionsCount = uniqueSessionsMap.get(period)?.size || 0;
         const totalInteractions = interactionCountMap.get(period) || 0;
@@ -740,8 +734,8 @@ export class EngagementMetricsService {
           dropRate: Math.round(dropRate * 100) / 100,
           sessionCount,
           // Enhanced metrics
-          totalTimeWatched: Math.round(totalTimeWatched * 100) / 100,
-          averageTimeWatched: Math.round(averageTimeWatched * 100) / 100,
+          totalTimeWatchedMinutes: Math.round(totalTimeWatchedMinutes * 100) / 100,
+          averageTimeWatchedMinutes: Math.round(averageTimeWatchedMinutes * 100) / 100,
           uniqueVideosCount,
           uniqueSessionsCount,
           totalInteractions,
@@ -763,73 +757,74 @@ export class EngagementMetricsService {
   }
 
   async getInterestCoOccurrenceMatrix() {
-    // Get all unique interests first
-    const allInterestsResult = await this.profileRepo
-      .createQueryBuilder('profile')
-      .select('DISTINCT UNNEST(profile.interests)', 'interest')
-      .getRawMany();
+    const manager = this.profileRepo.manager;
 
-    const allInterests = allInterestsResult.map((r) => r.interest).sort();
+    // Single query: individual interest counts (avoids loading full profile rows)
+    const individualCounts: { interest: string; count: string }[] =
+      await manager.query(`
+        SELECT UNNEST(interests) AS interest, COUNT(*)::int AS count
+        FROM profile
+        GROUP BY UNNEST(interests)
+        ORDER BY count DESC
+      `);
 
-    // Get profiles with their interests
-    const profilesWithInterests = await this.profileRepo.find({
-      select: ['interests'],
-    });
+    const allInterests = individualCounts.map((r) => r.interest).sort();
+    const totalUsers = await this.profileRepo.count();
 
-    // Define interest data type with proper structure
+    // Single query: pairwise co-occurrence counts via UNNEST self-join
+    const pairCounts: {
+      interest1: string;
+      interest2: string;
+      count: string;
+    }[] = await manager.query(`
+        SELECT a.interest AS interest1, b.interest AS interest2, COUNT(*)::int AS count
+        FROM (SELECT id, UNNEST(interests) AS interest FROM profile) a
+        JOIN (SELECT id, UNNEST(interests) AS interest FROM profile) b
+          ON a.id = b.id AND a.interest < b.interest
+        GROUP BY a.interest, b.interest
+      `);
+
+    // Build the matrix in JS from aggregated DB results
     interface InterestData {
       interest: string;
       userCount: number;
       coOccurrence: Record<string, number>;
     }
 
-    // Initialize co-occurrence matrix
+    const countByInterest = new Map<string, number>(
+      individualCounts.map((r) => [r.interest, parseInt(r.count as any)]),
+    );
+
     const matrix = {
       interests: allInterests,
-      counts: allInterests.map(
-        (interest) =>
-          ({
-            interest,
-            userCount: 0,
-            coOccurrence: Object.fromEntries(
-              allInterests.map((otherInterest) => [otherInterest, 0]),
-            ),
-          }) as InterestData,
-      ),
+      counts: allInterests.map((interest): InterestData => ({
+        interest,
+        userCount: countByInterest.get(interest) ?? 0,
+        coOccurrence: Object.fromEntries(allInterests.map((other) => [other, 0])),
+      })),
     };
 
-    // Build the matrix
-    profilesWithInterests.forEach((profile) => {
-      const interests = profile.interests || [];
-
-      // Count individual interests
-      interests.forEach((interest) => {
-        const interestObj = matrix.counts.find((i) => i.interest === interest);
-        if (interestObj) {
-          interestObj.userCount++;
-
-          // Count co-occurrences
-          interests.forEach((otherInterest) => {
-            interestObj.coOccurrence[otherInterest]++;
-          });
-        }
-      });
+    // Populate co-occurrence from pair query (symmetric)
+    pairCounts.forEach(({ interest1, interest2, count }) => {
+      const n = parseInt(count as any);
+      const obj1 = matrix.counts.find((i) => i.interest === interest1);
+      const obj2 = matrix.counts.find((i) => i.interest === interest2);
+      if (obj1) obj1.coOccurrence[interest2] = n;
+      if (obj2) obj2.coOccurrence[interest1] = n;
     });
 
-    // Calculate total users
-    const totalUsers = await this.profileRepo.count();
+    // Self co-occurrence = individual count
+    matrix.counts.forEach((obj) => {
+      obj.coOccurrence[obj.interest] = obj.userCount;
+    });
 
     return successHandler(
       'Interest co-occurrence matrix retrieved successfully',
       {
         totalUsers,
         matrix,
-        // Add histogram data for simple pie chart
         distributionData: matrix.counts
-          .map((item) => ({
-            interest: item.interest,
-            count: item.userCount,
-          }))
+          .map((item) => ({ interest: item.interest, count: item.userCount }))
           .sort((a, b) => b.count - a.count),
       },
     );

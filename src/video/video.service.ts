@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { CloudinaryUpload } from 'src/utils/coudinary-upload';
@@ -23,7 +23,8 @@ export class VideoService {
   }
 
   async findVideoById(id: string) {
-    const video = await this.videoRepo.findOneBy({ id: id });
+    const video = await this.videoRepo.findOneBy({ id });
+    if (!video) throw new NotFoundException('Video not found');
     return successHandler('Video found', video);
   }
 
@@ -43,16 +44,16 @@ export class VideoService {
   async searchVideos(keyword: string) {
     const videos = await this.videoRepo
       .createQueryBuilder('video')
-      .where('video.title LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere('video.genre LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere('video.short_desc LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere('video.about LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere('video.primary_lesson LIKE :keyword', {
+      .where('video.title ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere('video.genre ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere('video.short_desc ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere('video.about ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere('video.primary_lesson ILIKE :keyword', {
         keyword: `%${keyword}%`,
       })
-      .orWhere('video.theme LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere('video.impact LIKE :keyword', { keyword: `%${keyword}%` })
-      .orWhere(':keyword = ANY(video.tags)', { keyword: keyword })
+      .orWhere('video.theme ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere('video.impact ILIKE :keyword', { keyword: `%${keyword}%` })
+      .orWhere(':keyword ILIKE ANY(video.tags)', { keyword: keyword })
       .getMany();
     return successHandler('Videos found', videos);
   }
@@ -124,7 +125,7 @@ export class VideoService {
   }
 
   async deleteVideo(id: string) {
-    const video = await this.videoRepo.findBy({ id: id });
+    const video = await this.videoRepo.findOneBy({ id });
     if (!video) return errorhandler(404, 'Video not found');
     await this.videoRepo.remove(video);
     return successHandler('Video deleted successfully', null);

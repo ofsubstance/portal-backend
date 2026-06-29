@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
 import { Repository } from 'typeorm';
 import { UserSession } from '../entities/user_sessions.entity';
 
@@ -112,29 +111,9 @@ export class UserSessionsService {
   }
 
   extractUserIdFromRequest(req: Request): string | null {
-    try {
-      // Check for JWT token in Authorization header
-      const authHeader = req.headers.authorization;
-
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const decoded = jwt.verify(
-          token,
-          process.env.ACCESS_TOKEN_SECRET,
-        ) as any;
-
-        if (decoded && decoded.id) {
-          return decoded.id;
-        }
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error(
-        `Error extracting user ID from request: ${error.message}`,
-      );
-      return null;
-    }
+    // AuthGuard already verified the JWT and attached the payload as req.user
+    const user = (req as any)['user'];
+    return user?.id ?? user?.sub ?? null;
   }
 
   async endSession(sessionId: string): Promise<void> {
@@ -172,6 +151,12 @@ export class UserSessionsService {
       .execute();
 
     this.logger.log(`Ended ${result.affected || 0} sessions for user ${userId}`);
+  }
+
+  async findById(sessionId: string): Promise<UserSession | null> {
+    return this.userSessionRepository.findOne({
+      where: { id: sessionId },
+    });
   }
 
   async getActiveSession(sessionId: string): Promise<UserSession> {

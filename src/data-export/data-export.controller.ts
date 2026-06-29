@@ -1,8 +1,13 @@
 import { Controller, Get, Header, Logger, Res } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role } from 'src/enums/role.enum';
 import { DataExportService } from './data-export.service';
 
+@ApiTags('Data Export')
 @Controller('data-export')
+@Roles(Role.Admin)
 export class DataExportController {
   private readonly logger = new Logger('DataExportController');
 

@@ -12,11 +12,7 @@ export class CredLoginDto {
 }
 
 export class GoogleLoginDto {
-  @ApiProperty({ example: 'client@gmail.com' })
-  @IsEmail()
-  readonly email: string;
-
-  @ApiProperty({ example: 'client' })
+  @ApiProperty({ description: 'Google OAuth access token' })
   @IsString()
-  readonly name: string;
+  readonly accessToken: string;
 }

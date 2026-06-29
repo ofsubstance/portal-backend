@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 
+import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
 import { EmailService } from 'src/email.service';
 import { LoginEvent } from 'src/entities/login_events.entity';
@@ -33,6 +34,7 @@ export class AuthService {
   private refreshTokenSecret: string;
   private accessTokenExpiration: string;
   private refreshTokenExpiration: string;
+  private emailTokenSecret: string;
 
   constructor(
     private usersService: UsersService,
@@ -47,7 +49,6 @@ export class AuthService {
     private goHighLevelService: GoHighLevelService,
     private userSessionsService: UserSessionsService,
   ) {
-    // Cache token configuration values at service initialization
     this.accessTokenSecret = this.configService.get('ACCESS_TOKEN_SECRET');
     this.refreshTokenSecret = this.configService.get('REFRESH_TOKEN_SECRET');
     this.accessTokenExpiration = this.configService.get(
@@ -56,6 +57,7 @@ export class AuthService {
     this.refreshTokenExpiration = this.configService.get(
       'REFRESH_TOKEN_EXPIRATION_TIME',
     );
+    this.emailTokenSecret = this.configService.get('JWT_SECRET');
   }
 
   async getTokens(userId: string, role: string) {
@@ -83,17 +85,17 @@ export class AuthService {
   }
 
   generateEmailToken(email: string): string {
-    return jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return jwt.sign({ email }, this.emailTokenSecret, { expiresIn: '1d' });
   }
 
   verifyEmailToken(token: string): string | object {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, this.emailTokenSecret);
   }
 
   async signUp(signupUserDto: SignUpDto, userRole: Role = Role.User) {
     // Convert email to lowercase for consistency
     const normalizedEmail = signupUserDto.email.toLowerCase();
-    
+
     const user = await this.usersService.findUserByEmail(normalizedEmail);
     if (user.length) {
       throw new BadRequestException('User with this email already exists');
@@ -125,10 +127,7 @@ export class AuthService {
       profile: newProfile, // Associate the profile
     });
 
-    await this.emailService.sendVerificationEmail(
-      normalizedEmail,
-      emailToken,
-    );
+    await this.emailService.sendVerificationEmail(normalizedEmail, emailToken);
 
     const createdUser = await this.userRepo.save(newUser);
 
@@ -153,13 +152,13 @@ export class AuthService {
   async resendVerificationEmail(email: string) {
     // Convert email to lowercase for consistency
     const normalizedEmail = email.toLowerCase();
-    
+
     const [userInfo] = await this.usersService.findUserByEmail(normalizedEmail);
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
 
-    if (userInfo.status === 'active') {
+    if (userInfo.status === Status.Active) {
       throw new BadRequestException('Account already verified');
     }
 
@@ -218,19 +217,14 @@ export class AuthService {
   }
 
   async login(loginInfo: CredLoginDto, @Req() req: any) {
-    // Convert email to lowercase for consistency
-    console.log(loginInfo.email);
-    
     const normalizedEmail = loginInfo.email.toLowerCase();
-    console.log(normalizedEmail);
-    
     const [userInfo] = await this.usersService.findUserByEmail(normalizedEmail);
 
     if (!userInfo) {
       throw new NotFoundException('User with this email does not exist');
     }
 
-    if (userInfo.status === 'inactive') {
+    if (userInfo.status === Status.Inactive) {
       // Record login event asynchronously without awaiting
       this.recordLoginEvent(
         userInfo,
@@ -243,7 +237,7 @@ export class AuthService {
       throw new BadRequestException('Account Restricted!');
     }
 
-    if (userInfo.status === 'unverified') {
+    if (userInfo.status === Status.Unverified) {
       // Record login event asynchronously without awaiting
       this.recordLoginEvent(
         userInfo,
@@ -288,6 +282,8 @@ export class AuthService {
       this.recordLoginEvent(userInfo, true, 'credentials', null, req),
     ]);
 
+    this.goHighLevelService.trackUserLoggedIn(userInfo.email).catch(() => {});
+
     delete userInfo.password;
 
     return successHandler('Login successful', {
@@ -298,21 +294,16 @@ export class AuthService {
   }
 
   async refreshTokens(token: string) {
+    if (!token) {
+      throw new ForbiddenException('Access Denied');
+    }
+
     try {
-      const decodedJwtRefreshToken: any = this.jwtService.decode(token);
-
-      if (!decodedJwtRefreshToken) {
-        throw new ForbiddenException('Access Denied');
-      }
-      const expires = decodedJwtRefreshToken.exp;
-
-      if (expires < new Date().getTime() / 1000) {
-        throw new ForbiddenException('Access Denied');
-      }
-
-      const userInfo = await this.userRepo.findOneBy({
-        id: decodedJwtRefreshToken.sub,
+      const payload: any = await this.jwtService.verifyAsync(token, {
+        secret: this.refreshTokenSecret,
       });
+
+      const userInfo = await this.userRepo.findOneBy({ id: payload.sub });
 
       if (!userInfo) {
         throw new ForbiddenException('Access Denied');
@@ -328,22 +319,36 @@ export class AuthService {
         user: userInfo,
       });
     } catch (err) {
-      throw new BadRequestException(err);
+      throw new ForbiddenException('Access Denied');
     }
   }
 
   async googleLogin(googleLoginDto: GoogleLoginDto, @Req() req: any) {
+    // Verify the Google access token server-side
+    let googleEmail: string;
+    try {
+      const googleResponse = await axios.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        { headers: { Authorization: `Bearer ${googleLoginDto.accessToken}` } },
+      );
+      googleEmail = googleResponse.data.email;
+      if (!googleEmail) {
+        throw new Error('No email in Google response');
+      }
+    } catch {
+      throw new BadRequestException('Invalid Google access token');
+    }
+
     // Convert email to lowercase for consistency
-    const normalizedEmail = googleLoginDto.email.toLowerCase();
-    
-    let [userInfo] = await this.usersService.findUserByEmail(
-      normalizedEmail,
-    );
+    const normalizedEmail = googleEmail.toLowerCase();
+
+    let [userInfo] = await this.usersService.findUserByEmail(normalizedEmail);
 
     if (!userInfo) {
       throw new BadRequestException({
         message: 'Please sign up first',
-        details: 'This email is not registered. Please create an account through our sign-up process before using Google Sign-In.'
+        details:
+          'This email is not registered. Please create an account through our sign-up process before using Google Sign-In.',
       });
     }
 
@@ -359,6 +364,8 @@ export class AuthService {
       this.recordLoginEvent(userInfo, true, 'google', null, req),
     ]);
 
+    this.goHighLevelService.trackUserLoggedIn(userInfo.email).catch(() => {});
+
     delete userInfo.password;
 
     return successHandler('Login successful', {
@@ -371,14 +378,16 @@ export class AuthService {
   async forgotPassword(email: string) {
     // Convert email to lowercase for consistency
     const normalizedEmail = email.toLowerCase();
-    
-    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+
+    const user = await this.userRepo.findOne({
+      where: { email: normalizedEmail },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found.');
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id }, this.emailTokenSecret, {
       expiresIn: '1h',
     });
 
@@ -394,7 +403,7 @@ export class AuthService {
   async resetPassword(token: string, newPassword: string) {
     let decoded: any;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      decoded = jwt.verify(token, this.emailTokenSecret);
     } catch (err) {
       throw new BadRequestException('Invalid or expired token.');
     }

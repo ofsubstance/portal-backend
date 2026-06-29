@@ -9,6 +9,7 @@ import {
   startOfMonth,
 } from 'date-fns';
 import { LoginEvent } from 'src/entities/login_events.entity';
+import { UserSession } from 'src/entities/user_sessions.entity';
 import { User } from 'src/entities/users.entity';
 import { successHandler } from 'src/utils/response.handler';
 import { Repository } from 'typeorm';
@@ -28,45 +29,51 @@ export class PerformanceMetricsService {
     private loginEventRepo: Repository<LoginEvent>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(UserSession)
+    private userSessionRepo: Repository<UserSession>,
   ) {}
 
+  // A user is "active" on a day/month if they had a session that started or
+  // was last active during that period — not just if they logged in.
   async getDailyActiveUsers(date: Date = new Date()) {
-    // Ensure we're working with the exact date from the request
     const dateString = date.toISOString().split('T')[0];
     const startDate = startOfDay(parseISO(dateString));
     const endDate = endOfDay(parseISO(dateString));
 
-    const uniqueUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
-      .select('COUNT(DISTINCT "userId")', 'count')
-      .where('login_event.timestamp >= :startDate', { startDate })
-      .andWhere('login_event.timestamp <= :endDate', { endDate })
-      .andWhere('login_event.successful = :successful', { successful: true })
+    const result = await this.userSessionRepo
+      .createQueryBuilder('session')
+      .select('COUNT(DISTINCT session.userId)', 'count')
+      .where(
+        '(session.startTime BETWEEN :startDate AND :endDate OR session.lastActiveTime BETWEEN :startDate AND :endDate)',
+        { startDate, endDate },
+      )
+      .andWhere('session.userId IS NOT NULL')
       .getRawOne();
 
     return successHandler('Daily active users retrieved successfully', {
       date: dateString,
-      count: parseInt(uniqueUsers.count),
+      count: parseInt(result.count),
     });
   }
 
   async getMonthlyActiveUsers(date: Date = new Date()) {
-    // Ensure we're working with the exact month from the request
     const monthString = date.toISOString().split('T')[0].substring(0, 7);
     const startDate = startOfMonth(parseISO(`${monthString}-01`));
     const endDate = endOfMonth(parseISO(`${monthString}-01`));
 
-    const uniqueUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
-      .select('COUNT(DISTINCT "userId")', 'count')
-      .where('login_event.timestamp >= :startDate', { startDate })
-      .andWhere('login_event.timestamp <= :endDate', { endDate })
-      .andWhere('login_event.successful = :successful', { successful: true })
+    const result = await this.userSessionRepo
+      .createQueryBuilder('session')
+      .select('COUNT(DISTINCT session.userId)', 'count')
+      .where(
+        '(session.startTime BETWEEN :startDate AND :endDate OR session.lastActiveTime BETWEEN :startDate AND :endDate)',
+        { startDate, endDate },
+      )
+      .andWhere('session.userId IS NOT NULL')
       .getRawOne();
 
     return successHandler('Monthly active users retrieved successfully', {
       month: monthString,
-      count: parseInt(uniqueUsers.count),
+      count: parseInt(result.count),
     });
   }
 
@@ -91,16 +98,14 @@ export class PerformanceMetricsService {
     // Initialize all dates with zero counts
     const dateMap = createPeriodMap(dateRange, 'yyyy-MM-dd');
 
-    const dailyUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
-      .select('DATE(login_event.timestamp)', 'date')
-      .addSelect('COUNT(DISTINCT "userId")', 'count')
-      .where('login_event.timestamp >= :startDate', {
-        startDate: queryStartDate,
-      })
-      .andWhere('login_event.timestamp <= :endDate', { endDate: queryEndDate })
-      .andWhere('login_event.successful = :successful', { successful: true })
-      .groupBy('DATE(login_event.timestamp)')
+    const dailyUsers = await this.userSessionRepo
+      .createQueryBuilder('session')
+      .select('DATE(session.startTime)', 'date')
+      .addSelect('COUNT(DISTINCT session.userId)', 'count')
+      .where('session.startTime >= :startDate', { startDate: queryStartDate })
+      .andWhere('session.startTime <= :endDate', { endDate: queryEndDate })
+      .andWhere('session.userId IS NOT NULL')
+      .groupBy('DATE(session.startTime)')
       .orderBy('date', 'ASC')
       .getRawMany();
 
@@ -126,7 +131,6 @@ export class PerformanceMetricsService {
   }
 
   async getMauTrend(startDate?: Date, endDate?: Date) {
-    // Process the date parameters
     const {
       startPeriodString: startMonthString,
       endPeriodString: endMonthString,
@@ -134,26 +138,22 @@ export class PerformanceMetricsService {
       queryEndDate,
     } = processDateParams(startDate, endDate, DurationSpan.MONTHLY);
 
-    // Get all months in the range
     const monthRange = getPeriodsInRange(
       queryStartDate,
       queryEndDate,
       DurationSpan.MONTHLY,
     );
 
-    // Initialize all months with zero counts
     const monthMap = createPeriodMap(monthRange, 'yyyy-MM');
 
-    const monthlyUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
-      .select("TO_CHAR(login_event.timestamp, 'YYYY-MM')", 'month')
-      .addSelect('COUNT(DISTINCT "userId")', 'count')
-      .where('login_event.timestamp >= :startDate', {
-        startDate: queryStartDate,
-      })
-      .andWhere('login_event.timestamp <= :endDate', { endDate: queryEndDate })
-      .andWhere('login_event.successful = :successful', { successful: true })
-      .groupBy("TO_CHAR(login_event.timestamp, 'YYYY-MM')")
+    const monthlyUsers = await this.userSessionRepo
+      .createQueryBuilder('session')
+      .select("TO_CHAR(session.startTime, 'YYYY-MM')", 'month')
+      .addSelect('COUNT(DISTINCT session.userId)', 'count')
+      .where('session.startTime >= :startDate', { startDate: queryStartDate })
+      .andWhere('session.startTime <= :endDate', { endDate: queryEndDate })
+      .andWhere('session.userId IS NOT NULL')
+      .groupBy("TO_CHAR(session.startTime, 'YYYY-MM')")
       .orderBy('month', 'ASC')
       .getRawMany();
 
@@ -178,7 +178,6 @@ export class PerformanceMetricsService {
   }
 
   async getMonthlyGrowthRate(startDate?: Date, endDate?: Date) {
-    // Process the date parameters
     const {
       startPeriodString: startMonthString,
       endPeriodString: endMonthString,
@@ -186,26 +185,22 @@ export class PerformanceMetricsService {
       queryEndDate,
     } = processDateParams(startDate, endDate, DurationSpan.MONTHLY, true);
 
-    // Get all months in the range
     const monthRange = getPeriodsInRange(
       queryStartDate,
       queryEndDate,
       DurationSpan.MONTHLY,
     );
 
-    // Initialize all months with zero counts
     const monthMap = createPeriodMap(monthRange, 'yyyy-MM');
 
-    const monthlyUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
-      .select("TO_CHAR(login_event.timestamp, 'YYYY-MM')", 'month')
-      .addSelect('COUNT(DISTINCT "userId")', 'count')
-      .where('login_event.timestamp >= :startDate', {
-        startDate: queryStartDate,
-      })
-      .andWhere('login_event.timestamp <= :endDate', { endDate: queryEndDate })
-      .andWhere('login_event.successful = :successful', { successful: true })
-      .groupBy("TO_CHAR(login_event.timestamp, 'YYYY-MM')")
+    const monthlyUsers = await this.userSessionRepo
+      .createQueryBuilder('session')
+      .select("TO_CHAR(session.startTime, 'YYYY-MM')", 'month')
+      .addSelect('COUNT(DISTINCT session.userId)', 'count')
+      .where('session.startTime >= :startDate', { startDate: queryStartDate })
+      .andWhere('session.startTime <= :endDate', { endDate: queryEndDate })
+      .andWhere('session.userId IS NOT NULL')
+      .groupBy("TO_CHAR(session.startTime, 'YYYY-MM')")
       .orderBy('month', 'ASC')
       .getRawMany();
 
@@ -305,20 +300,49 @@ export class PerformanceMetricsService {
       usersByCohort.get(cohort.firstLoginMonth).push(cohort.userId);
     });
 
+    const allCohortUserIds = cohorts.map((c) => c.userId);
+
+    // Single bulk query: get all (userId, month) active pairs for every cohort user.
+    // This replaces the previous O(cohorts × months) per-iteration queries.
+    const allActivity = await this.loginEventRepo
+      .createQueryBuilder('login_event')
+      .select('login_event.userId', 'userId')
+      .addSelect(`TO_CHAR(login_event.timestamp, 'YYYY-MM')`, 'month')
+      .where('login_event.userId IN (:...userIds)', {
+        userIds: allCohortUserIds,
+      })
+      .andWhere('login_event.timestamp >= :startDate', {
+        startDate: queryStartDate,
+      })
+      .andWhere('login_event.timestamp <= :endDate', {
+        endDate: queryEndDate,
+      })
+      .andWhere('login_event.successful = :successful', { successful: true })
+      .groupBy('login_event.userId')
+      .addGroupBy(`TO_CHAR(login_event.timestamp, 'YYYY-MM')`)
+      .getRawMany();
+
+    // Build userId → Set<month> for O(1) lookups
+    const userActiveMonths = new Map<string, Set<string>>();
+    allActivity.forEach(({ userId, month }) => {
+      if (!userActiveMonths.has(userId)) {
+        userActiveMonths.set(userId, new Set());
+      }
+      userActiveMonths.get(userId).add(month);
+    });
+
     // Initialize cohort data structure
     const retentionData = new Map<
       string,
       {
         totalUsers: number;
-        returningUsers: Map<number, number>; // monthsAfterCohort -> count
-        returningRates: Map<number, number>; // monthsAfterCohort -> percentage
+        returningUsers: Map<number, number>;
+        returningRates: Map<number, number>;
         averageRetentionRate: number;
       }
     >();
 
-    // For each cohort, calculate retention
     for (const [cohortMonth, userIds] of usersByCohort.entries()) {
-      // Initialize retention data for this cohort
       retentionData.set(cohortMonth, {
         totalUsers: userIds.length,
         returningUsers: new Map(),
@@ -326,41 +350,27 @@ export class PerformanceMetricsService {
         averageRetentionRate: 0,
       });
 
-      // Calculate max months we can track for this cohort
       const cohortStartDate = new Date(`${cohortMonth}-01`);
       const maxMonths = getMonthDifference(
         cohortStartDate,
         new Date(`${endMonthString}-01`),
       );
 
-      // For each subsequent month, get returning users
+      // Count returning users per subsequent month using the in-memory map
       for (let monthDiff = 1; monthDiff <= maxMonths; monthDiff++) {
         const targetMonthDate = new Date(cohortStartDate);
         targetMonthDate.setMonth(targetMonthDate.getMonth() + monthDiff);
         const targetMonth = format(targetMonthDate, 'yyyy-MM');
 
-        // Get returning users for this month
-        const returningUsersCount = await this.loginEventRepo
-          .createQueryBuilder('login_event')
-          .select('COUNT(DISTINCT login_event.userId)', 'count')
-          .where('login_event.userId IN (:...userIds)', { userIds })
-          .andWhere(
-            `TO_CHAR(login_event.timestamp, 'YYYY-MM') = :targetMonth`,
-            { targetMonth },
-          )
-          .andWhere('login_event.successful = :successful', {
-            successful: true,
-          })
-          .getRawOne();
+        const count = userIds.filter((uid) =>
+          userActiveMonths.get(uid)?.has(targetMonth),
+        ).length;
 
-        const count = parseInt(returningUsersCount.count);
         const rate = Math.round((count / userIds.length) * 100);
-
         retentionData.get(cohortMonth).returningUsers.set(monthDiff, count);
         retentionData.get(cohortMonth).returningRates.set(monthDiff, rate);
       }
 
-      // Calculate average retention rate across all subsequent months
       const cohortData = retentionData.get(cohortMonth);
       if (cohortData.returningRates.size > 0) {
         const totalRate = Array.from(cohortData.returningRates.values()).reduce(
@@ -504,22 +514,17 @@ export class PerformanceMetricsService {
         periodLabel = 'date';
     }
 
-    // Use a single optimized query for all span types
-    const activeUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
+    const activeUsers = await this.userSessionRepo
+      .createQueryBuilder('session')
       .select(
-        `TO_CHAR("login_event"."timestamp", '${sqlFormatPattern}')`,
+        `TO_CHAR("session"."startTime", '${sqlFormatPattern}')`,
         'period',
       )
-      .addSelect('COUNT(DISTINCT "login_event"."userId")', 'count')
-      .where('login_event.timestamp >= :startDate', {
-        startDate: queryStartDate,
-      })
-      .andWhere('login_event.timestamp <= :endDate', {
-        endDate: queryEndDate,
-      })
-      .andWhere('login_event.successful = :successful', { successful: true })
-      .groupBy(`TO_CHAR("login_event"."timestamp", '${sqlFormatPattern}')`)
+      .addSelect('COUNT(DISTINCT "session"."userId")', 'count')
+      .where('session.startTime >= :startDate', { startDate: queryStartDate })
+      .andWhere('session.startTime <= :endDate', { endDate: queryEndDate })
+      .andWhere('session.userId IS NOT NULL')
+      .groupBy(`TO_CHAR("session"."startTime", '${sqlFormatPattern}')`)
       .orderBy('period', 'ASC')
       .getRawMany();
 
@@ -585,22 +590,17 @@ export class PerformanceMetricsService {
         periodLabel = 'date';
     }
 
-    // Use a single optimized query for all span types
-    const periodUsers = await this.loginEventRepo
-      .createQueryBuilder('login_event')
+    const periodUsers = await this.userSessionRepo
+      .createQueryBuilder('session')
       .select(
-        `TO_CHAR("login_event"."timestamp", '${sqlFormatPattern}')`,
+        `TO_CHAR("session"."startTime", '${sqlFormatPattern}')`,
         'period',
       )
-      .addSelect('COUNT(DISTINCT "login_event"."userId")', 'count')
-      .where('login_event.timestamp >= :startDate', {
-        startDate: queryStartDate,
-      })
-      .andWhere('login_event.timestamp <= :endDate', {
-        endDate: queryEndDate,
-      })
-      .andWhere('login_event.successful = :successful', { successful: true })
-      .groupBy(`TO_CHAR("login_event"."timestamp", '${sqlFormatPattern}')`)
+      .addSelect('COUNT(DISTINCT "session"."userId")', 'count')
+      .where('session.startTime >= :startDate', { startDate: queryStartDate })
+      .andWhere('session.startTime <= :endDate', { endDate: queryEndDate })
+      .andWhere('session.userId IS NOT NULL')
+      .groupBy(`TO_CHAR("session"."startTime", '${sqlFormatPattern}')`)
       .orderBy('period', 'ASC')
       .getRawMany();
 

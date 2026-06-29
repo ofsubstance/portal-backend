@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GoHighLevelService } from 'src/gohighlevel/gohighlevel.service';
 import { ShareableLink } from 'src/entities/sharable_links.entity';
 import { ShareableLinkEngagement } from 'src/entities/shareable_link_engagements.entity';
 import { User } from 'src/entities/users.entity';
@@ -19,6 +20,7 @@ export class SharelinksService {
     private shareLinkRepo: Repository<ShareableLink>,
     @InjectRepository(ShareableLinkEngagement)
     private engagementRepo: Repository<ShareableLinkEngagement>,
+    private goHighLevelService: GoHighLevelService,
   ) {}
 
   // Calculate expiration date based on validity days
@@ -66,6 +68,11 @@ export class SharelinksService {
       });
 
       await this.shareLinkRepo.save(shareLink);
+
+      this.goHighLevelService
+        .trackShareLinkGenerated(user.email, video.title, uniqueLink)
+        .catch(() => {});
+
       return successHandler('Share link created successfully', {
         ...shareLink,
         unique_link: uniqueLink,
@@ -192,13 +199,7 @@ export class SharelinksService {
 
       const shareLink = shareLinkResult.body;
 
-      // Increment views count
-      await this.shareLinkRepo.update(
-        { id: shareLink.id },
-        { views: () => 'views + 1' },
-      );
-
-      // Check if this IP has already engaged with this link
+      // Check uniqueness before saving (engagement record is the source of truth)
       const existingEngagement = await this.engagementRepo.findOne({
         where: {
           shareableLink: { id: shareLink.id },
@@ -206,17 +207,27 @@ export class SharelinksService {
         },
       });
 
-      // Create engagement record
+      // Save engagement record first; only then increment the counter so
+      // they can't diverge if the second operation fails.
       const engagement = this.engagementRepo.create({
         shareableLink: shareLink,
         ip_address: trackLinkEngagementDto.ip_address,
         user_agent: trackLinkEngagementDto.user_agent,
         referrer: trackLinkEngagementDto.referrer,
-        // Mark as unique visitor only if this IP hasn't engaged before
-        is_unique_visitor: existingEngagement ? false : true,
+        is_unique_visitor: !existingEngagement,
       });
-
       await this.engagementRepo.save(engagement);
+
+      await this.shareLinkRepo.update(
+        { id: shareLink.id },
+        { views: () => 'views + 1' },
+      );
+
+      if (shareLink.user?.email) {
+        this.goHighLevelService
+          .trackShareLinkClicked(shareLink.user.email)
+          .catch(() => {});
+      }
 
       return successHandler('Link engagement tracked successfully', null);
     } catch (error) {
@@ -237,13 +248,6 @@ export class SharelinksService {
 
       const shareLink = shareLinkResult.body;
 
-      // Increment views count
-      await this.shareLinkRepo.update(
-        { id: shareLink.id },
-        { views: () => 'views + 1' },
-      );
-
-      // Check if this IP has already engaged with this link
       const existingEngagement = await this.engagementRepo.findOne({
         where: {
           shareableLink: { id: shareLink.id },
@@ -251,17 +255,25 @@ export class SharelinksService {
         },
       });
 
-      // Create engagement record
       const engagement = this.engagementRepo.create({
         shareableLink: shareLink,
         ip_address: trackLinkEngagementDto.ip_address,
         user_agent: trackLinkEngagementDto.user_agent,
         referrer: trackLinkEngagementDto.referrer,
-        // Mark as unique visitor only if this IP hasn't engaged before
-        is_unique_visitor: existingEngagement ? false : true,
+        is_unique_visitor: !existingEngagement,
       });
-
       await this.engagementRepo.save(engagement);
+
+      await this.shareLinkRepo.update(
+        { id: shareLink.id },
+        { views: () => 'views + 1' },
+      );
+
+      if (shareLink.user?.email) {
+        this.goHighLevelService
+          .trackShareLinkClicked(shareLink.user.email)
+          .catch(() => {});
+      }
 
       return successHandler('Link engagement tracked successfully', null);
     } catch (error) {

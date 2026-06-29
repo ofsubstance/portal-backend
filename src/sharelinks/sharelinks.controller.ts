@@ -3,6 +3,7 @@ import {
   Catch,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -85,9 +86,14 @@ export class SharelinksController {
     );
   }
 
-  @Public()
   @Get('user/:userId')
-  async findShareLinkByUser(@Param('userId') userId: string) {
+  async findShareLinkByUser(
+    @Param('userId') userId: string,
+    @Req() request: any,
+  ) {
+    if (request.user.role !== Role.Admin && request.user.id !== userId) {
+      throw new ForbiddenException();
+    }
     return await this.sharelinksService.getShareLinkByUserId(userId);
   }
 

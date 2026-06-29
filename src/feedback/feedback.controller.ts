@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Param,
   Post,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -14,9 +16,15 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 import { Public } from 'src/decorators/auth.decorator';
+import { Role } from 'src/enums/role.enum';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { FeedbackService } from './feedback.service';
+
+interface AuthenticatedRequest extends Request {
+  user: { id: string; role: Role };
+}
 
 @ApiTags('Feedback')
 @Controller('feedback')
@@ -88,7 +96,13 @@ export class FeedbackController {
   })
   @ApiResponse({ status: 200, description: 'Feedbacks retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getFeedbacksByUser(@Param('userId') userId: string) {
+  async getFeedbacksByUser(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (req.user.role !== Role.Admin && req.user.id !== userId) {
+      throw new ForbiddenException();
+    }
     return this.feedbackService.getFeedbacksByUser(userId);
   }
 

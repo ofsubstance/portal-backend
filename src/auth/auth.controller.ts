@@ -1,6 +1,5 @@
 import {
   Body,
-  Catch,
   Controller,
   Get,
   Param,
@@ -17,7 +16,6 @@ import { AuthService } from './auth.service';
 import { CredLoginDto, GoogleLoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/signup.dto';
 
-@Catch()
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -112,9 +110,9 @@ export class AuthController {
   @Public()
   @Post('google-login')
   async googleLogin(
-    @Req() req,
+    @Req() req: Request,
     @Body() googleLoginDto: GoogleLoginDto,
-    @Res({ passthrough: true }) res,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.googleLogin(googleLoginDto, req);
 
