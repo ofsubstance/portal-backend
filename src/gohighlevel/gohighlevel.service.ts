@@ -27,7 +27,8 @@ export class GoHighLevelService {
           },
         },
       );
-      return response.data?.contact?.id ?? null;
+      // GHL returns `contact` (singular) for newly created contacts and `contacts` (array) for existing ones
+      return response.data?.contact?.id ?? response.data?.contacts?.[0]?.id ?? null;
     } catch {
       return null;
     }
@@ -58,7 +59,7 @@ export class GoHighLevelService {
         last_login_date: new Date().toISOString(),
       });
       this.logger.log(`Tracked user_logged_in in GHL for: ${email}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error tracking user_logged_in in GHL: ${error.message}`,
       );
@@ -79,7 +80,7 @@ export class GoHighLevelService {
         last_content_engaged_link: contentLink,
       });
       this.logger.log(`Tracked content_completed in GHL for: ${email}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error tracking content_completed in GHL: ${error.message}`,
       );
@@ -88,8 +89,8 @@ export class GoHighLevelService {
 
   async trackShareLinkGenerated(
     email: string,
-    contentTitle: string,
-    shareLink: string,
+    _contentTitle: string,
+    _shareLink: string,
   ): Promise<void> {
     try {
       const contactId = await this.lookupContactByEmail(email);
@@ -106,7 +107,7 @@ export class GoHighLevelService {
         },
       );
       this.logger.log(`Tracked share_link_generated in GHL for: ${email}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error tracking share_link_generated in GHL: ${error.message}`,
       );
@@ -129,7 +130,7 @@ export class GoHighLevelService {
         },
       );
       this.logger.log(`Tracked share_link_clicked in GHL for: ${ownerEmail}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error tracking share_link_clicked in GHL: ${error.message}`,
       );
@@ -177,7 +178,7 @@ export class GoHighLevelService {
         `Contact created successfully in GoHighLevel: ${response.data.contact.id}`,
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error creating contact in GoHighLevel: ${error.message}`,
         error.stack,
